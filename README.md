@@ -22,6 +22,10 @@ bash download_models.sh
 python detect.py --merge_vertical true --image_path images/example.jpg
 ```
 
+## Online API
+
+You can try LanyOCR free on [RapidAPI](https://rapidapi.com/JC1DA/api/lanyocr)
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).

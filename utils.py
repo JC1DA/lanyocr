@@ -132,7 +132,6 @@ def check_area_merge(rrect1: LanyOcrRRect, rrect2: LanyOcrRRect, thresh=0.75):
     merged_rrect_area = merged_rrect[1][0] * merged_rrect[1][1]
 
     ratio = (rrect1_area + rrect2_area) / merged_rrect_area
-
     return ratio > thresh
 
 

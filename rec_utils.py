@@ -66,6 +66,7 @@ def decode(text_index, text_prob=None, is_remove_duplicate=False):
 
 def recognize_text(recognizer_session, img, model_h=32, model_w=320):
     norm_img = normalize_img(img, model_h, model_w)
+    # norm_img = norm_img.astype(np.float16)
     preds = recognizer_session.run(None, {"x": [norm_img]})[0][0]
     preds_idx = preds.argmax(axis=1)
     preds_prob = preds.max(axis=1)

@@ -39,6 +39,16 @@ def is_flipped(direction_classifier_session, img, thresh=0.9):
     return rotated_probs[1] > thresh
 
 
+def is_flipped_batch(direction_classifier_session, imgs, thresh=0.9):
+    normed_imgs = []
+    for img in imgs:
+        normed_img = resize_norm_img(img, [3, 48, 192])
+        normed_imgs.append(normed_img)
+
+    rotated_probs = direction_classifier_session.run(None, {"x": normed_imgs})[0]
+    return [True if p[1] > thresh else False for p in rotated_probs]
+
+
 def flip_image_if_needed(direction_classifier_session, img, thresh=0.95):
     if is_flipped(direction_classifier_session, img, thresh):
         img = cv2.rotate(img, cv2.cv2.ROTATE_180)

@@ -147,16 +147,6 @@ def main(args):
 
             dst_img = line_img[:, left:right, :]
 
-            sub_rrect_h, sub_rrect_w = dst_img.shape[:2]
-            sub_rrect_ratio = float(sub_rrect_h) / sub_rrect_w
-
-            # sometimes, if small text box is detected as a square/rectangle with 0 or 90 degrees angle, we have to rotate the box relative to the text line to get horizontal text
-            if sub_rrect_ratio >= 0.75 and sub_rrect_ratio <= 1.25:
-                sub_rrect_angle = sub_rrect.rrect[2]
-
-                if abs(line_angle - sub_rrect_angle) > 10:
-                    dst_img = rotate_image(dst_img, line_angle)
-
             resized_dst_img = resize_img_to_height(dst_img, 32)
             h, w = resized_dst_img.shape[:2]
 
@@ -233,16 +223,26 @@ def main(args):
         x_center = np.sum(box[:, 0]) // 4
         y_center = np.sum(box[:, 1]) // 4
 
+        left_points = []
+        for p in box:
+            if p[0] < x_center:
+                left_points.append(p)
+
         vis_img = cv2.drawContours(vis_img, [box], 0, COLORS[line_idx % len(COLORS)], 2)
 
         vis_img = cv2.putText(
             vis_img,
             f"{text}",
             # f"{line_idx}",
-            (int(x_center), int(y_center)),
+            # (int(x_center), int(y_center)),
+            (
+                int(left_points[0][0] * 0.5 + left_points[1][0] * 0.5),
+                int(left_points[0][1] * 0.5 + left_points[1][1] * 0.5),
+            ),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.75,
-            COLORS[line_idx % len(COLORS)],
+            0.5,
+            # COLORS[line_idx % len(COLORS)],
+            (0, 255, 255),
             1,
             cv2.LINE_AA,
         )

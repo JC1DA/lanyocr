@@ -4,7 +4,7 @@ A general OCR to detect and recognize English texts in an image based on a combi
 
 LanyOCR automatically merges text boxes into lines even for rotated texts.
 
-![alt text](outputs/output.jpg)
+![alt text](outputs/example1.jpg)
 
 ![alt text](outputs/example2.jpg)
 

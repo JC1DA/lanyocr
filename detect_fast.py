@@ -1,3 +1,5 @@
+import pickle
+import json
 import os
 import time
 import onnxruntime
@@ -18,7 +20,6 @@ ROTATE_90DEGREES_THRESH = 1.5
 def main(args):
     # load models
     providers = ["CUDAExecutionProvider"]
-    # providers = ["TensorrtExecutionProvider", "CUDAExecutionProvider"]
     opts = onnxruntime.SessionOptions()
     opts.graph_optimization_level = (
         onnxruntime.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
@@ -40,34 +41,19 @@ def main(args):
     imgs = [resized_img]
 
     # run detector
-    t0 = time.time()
     det_preds = detector_session.run(["output"], {"input": imgs})[0]
-    t1 = time.time()
     det_polys = postprocess(det_preds[0], img)
-    t2 = time.time()
     det_lines = merge_text_boxes(det_polys, merge_vertical=args.merge_vertical)
-    t3 = time.time()
 
     original_img = np.array(img)
     vis_img = np.array(original_img)
 
-    rec_lat = 0
-    extra_rec_lat = 0
-
-    direction_lat = 0
-    extra_direction_lat = 0
-
     COLORS = [
         # (0, 0, 0),
-        (127, 0, 0),
         (255, 0, 0),
-        (0, 127, 0),
         (0, 255, 0),
-        (0, 0, 127),
         (0, 0, 255),
-        (127, 127, 0),
         (255, 255, 0),
-        (0, 127, 127),
         (0, 255, 255),
     ]
 
@@ -78,6 +64,7 @@ def main(args):
 
         line_rrect = line.get_rrect()
         line_angle = line_rrect[2]
+
         line_img = crop_rrect(np.array(original_img), line_rrect)
 
         line_h, line_w = line_img.shape[:2]
@@ -87,6 +74,7 @@ def main(args):
         # determine if a text is 180 degrees flipped or not
         flipped_count = 0
         num_tries = 3
+        line_flipped = False
 
         direction_lat_t0 = time.time()
         padded_imgs = []
@@ -102,68 +90,62 @@ def main(args):
 
             padded_imgs.append(padded_img)
 
-            # if is_flipped(direction_classifier_session, padded_img, 0.925):
-            #     flipped_count += 1
-
+        # run in batch
         for flipped in is_flipped_batch(
             direction_classifier_session, padded_imgs, 0.925
         ):
             if flipped:
                 flipped_count += 1
 
-        direction_lat += time.time() - direction_lat_t0
-
         if flipped_count > num_tries // 2:
             line_img = cv2.rotate(line_img, cv2.cv2.ROTATE_180)
+            line_flipped = True
 
-        # cv2.imwrite(f"./tmp/line_{line_idx}.jpg", line_img)
+        merged_sub_rrect_list: List[List[LanyOcrRRect]] = []
+        merged_imgs: List = []
+        spacing = 10
 
-        # recognize each text independently for best accuracy
-        for sub_rrect in line.sub_rrects:
+        merged_img = np.ones(shape=(32, 320, 3), dtype=np.uint8) * 255
+        s = 0
+
+        for sub_rrect_idx, sub_rrect in enumerate(line.sub_rrects):
+            if len(merged_sub_rrect_list) == 0:
+                merged_sub_rrect_list.append([])
+
             sub_rrect: LanyOcrRRect = sub_rrect
+            rrect_center = sub_rrect.rrect[0]
 
-            _img = np.array(original_img)
-            dst_img = crop_rrect(_img, sub_rrect.rrect)
+            # rotate sub-rrect to horizontal line
+            delta_x = abs(line_rrect[0][0] - rrect_center[0])
+            delta_y = abs(line_rrect[0][1] - rrect_center[1])
+            d = distance(line_rrect[0], rrect_center)
 
-            # use template matching with the text line box to determine the correct orientation of the box
-            _scores = []
-            _imgs = []
+            if delta_x > delta_y:
+                if rrect_center[0] < line_rrect[0][0]:
+                    new_x = line_img.shape[1] // 2 - d
+                else:
+                    new_x = line_img.shape[1] // 2 + d
+            else:
+                if rrect_center[1] < line_rrect[0][1]:
+                    new_x = line_img.shape[1] // 2 + d
+                else:
+                    new_x = line_img.shape[1] // 2 - d
 
-            rotated_img = dst_img
-            for _ in range(4):
-                max_val = 0
+            if line_flipped:
+                new_x = line_img.shape[1] - new_x
 
-                if (
-                    rotated_img.shape[0] <= line_img.shape[0]
-                    and rotated_img.shape[1] <= line_img.shape[1]
-                ):
-                    res = cv2.matchTemplate(line_img, rotated_img, cv2.TM_CCOEFF_NORMED)
-                    _, max_val, _, _ = cv2.minMaxLoc(res)
+            new_y = line_img.shape[0] // 2
+            w, h = sub_rrect.rrect[1]
 
-                _scores.append(max_val)
-                _imgs.append(rotated_img)
+            new_x, new_y, w, h = int(new_x), int(new_y), int(w), int(h)
 
-                rotated_img = cv2.rotate(rotated_img, cv2.ROTATE_90_CLOCKWISE)
+            if h > w:
+                w, h = h, w
 
-            best_idx = np.argmax(_scores)
-            best_score = _scores[best_idx]
-            best_img = _imgs[best_idx]
+            left = max(0, new_x - w // 2)
+            right = min(new_x + w // 2, line_img.shape[1] - 1)
 
-            _scores[best_idx] = 0
-            second_best_idx = np.argmax(_scores)
-            second_best_score = _scores[second_best_idx]
-            second_best_img = _imgs[second_best_idx]
-
-            dst_img = _imgs[best_idx]
-
-            # in case we don't have clear answers from template matching, use direction model to determine
-            if best_score - second_best_score < 0.1:
-                extra_direction_lat_t0 = time.time()
-                if not is_flipped(direction_classifier_session, best_img, 0.5):
-                    dst_img = best_img
-                elif not is_flipped(direction_classifier_session, second_best_img, 0.5):
-                    dst_img = second_best_img
-                extra_direction_lat += time.time() - extra_direction_lat_t0
+            dst_img = line_img[:, left:right, :]
 
             sub_rrect_h, sub_rrect_w = dst_img.shape[:2]
             sub_rrect_ratio = float(sub_rrect_h) / sub_rrect_w
@@ -175,19 +157,69 @@ def main(args):
                 if abs(line_angle - sub_rrect_angle) > 10:
                     dst_img = rotate_image(dst_img, line_angle)
 
-            rec_t0 = time.time()
-            sub_text, sub_prob = recognize_text(recognizer_session, dst_img)
-            rec_lat += time.time() - rec_t0
+            resized_dst_img = resize_img_to_height(dst_img, 32)
+            h, w = resized_dst_img.shape[:2]
 
-            if not isascii(sub_text):
-                extra_rec_t0 = time.time()
-                for angle in [45, 135]:
-                    _dst_img = rotate_image(dst_img, angle)
-                    sub_text, sub_prob = recognize_text(recognizer_session, _dst_img)
-                    if isascii(sub_text):
-                        dst_img = _dst_img
-                        break
-                extra_rec_lat += time.time() - extra_rec_t0
+            if s + w >= args.text_recognizer_width - 5:
+                # do not merge sub-rrect into single image anymore
+                merged_img[:, s + 1 :, :] = 127
+                merged_imgs.append(merged_img)
+                # initialize new merge
+                merged_img = np.ones(shape=(32, 320, 3), dtype=np.uint8) * 255
+                s = 0
+                merged_sub_rrect_list.append([])
+
+            merged_sub_rrect_list[-1].append(sub_rrect)
+
+            if w <= args.text_recognizer_width:
+                merged_img[:, s : s + w, :] = resized_dst_img
+            else:
+                # very long sub-rrect
+                resized_dst_img = resize_img_to_width(resized_dst_img, 320)
+                h, w = resized_dst_img.shape[:2]
+                merged_img[:h, :, :] = resized_dst_img
+
+            s += w
+
+            if args.merge_boxes_inference:
+                # pick a color to set as background color between text-words
+                col1 = merged_img[2:4, :s, :]
+                col2 = merged_img[28:30, :s, :]
+                last_column = np.concatenate([col1, col2], axis=0)
+                last_column = np.reshape(last_column, [-1, 3])
+
+                b = last_column[:, 0]
+                g = last_column[:, 1]
+                r = last_column[:, 2]
+                b = np.sort(b)
+                g = np.sort(g)
+                r = np.sort(r)
+                b = b[len(b) // 2]
+                g = g[len(g) // 2]
+                r = r[len(r) // 2]
+
+                padding_value = np.array([b, g, r], dtype=np.uint8)
+                merged_img[:, s : s + spacing, :] = padding_value
+                s += spacing
+
+            if (
+                not args.merge_boxes_inference
+                or sub_rrect_idx == len(line.sub_rrects) - 1
+            ):
+                merged_img[:, s + 1 :, :] = 127
+                merged_imgs.append(merged_img)
+                merged_img = np.ones(shape=(32, 320, 3), dtype=np.uint8) * 255
+                s = 0
+
+                if sub_rrect_idx < len(line.sub_rrects) - 1:
+                    merged_sub_rrect_list.append([])
+
+        recogition_results = recognize_text_batch(recognizer_session, merged_imgs)
+
+        for sub_rrects, recognition_result in zip(
+            merged_sub_rrect_list, recogition_results
+        ):
+            sub_text, sub_prob = recognition_result
 
             if sub_text != "":
                 if text != "":
@@ -195,42 +227,29 @@ def main(args):
                 text += sub_text
                 prob *= sub_prob
 
-        texts.append(text)
-
+        # visualize boxes and texts
         points = cv2.boxPoints(line.get_rrect())
         box = np.int0(np.array(points))
         x_center = np.sum(box[:, 0]) // 4
         y_center = np.sum(box[:, 1]) // 4
-        # vis_img = cv2.drawContours(vis_img, [box], 0, (0, 255, 0), 1)
+
         vis_img = cv2.drawContours(vis_img, [box], 0, COLORS[line_idx % len(COLORS)], 2)
 
         vis_img = cv2.putText(
             vis_img,
-            # f"{text}",
-            f"{line_idx}",
+            f"{text}",
+            # f"{line_idx}",
             (int(x_center), int(y_center)),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.75,
-            (0, 0, 255),
+            COLORS[line_idx % len(COLORS)],
             1,
             cv2.LINE_AA,
         )
 
         print(f"Line {line_idx}: {text}")
 
-    t4 = time.time()
-
     cv2.imwrite("outputs/output.jpg", vis_img)
-
-    print("Detector latency: {:.4f} secs".format(t1 - t0))
-    print("Detector postproc latency: {:.4f} secs".format(t2 - t1))
-    print("Detector merge latency: {:.4f} secs".format(t3 - t2))
-    print("Direction latency: {:.4f} secs".format(direction_lat))
-    print("Direction extra latency: {:.4f} secs".format(extra_direction_lat))
-    print("Recognizer latency: {:.4f} secs".format(rec_lat))
-    print("Recognizer extra latency: {:.4f} secs".format(extra_rec_lat))
-    print("Recognizer total latency: {:.4f} secs".format(t4 - t3))
-    print("E2e latency: {:.4f} secs".format(t4 - t0))
 
 
 if __name__ == "__main__":
@@ -254,6 +273,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--merge_vertical", default=False, type=lambda x: (str(x).lower() == "true")
     )
+    parser.add_argument(
+        "--merge_boxes_inference",
+        default=False,
+        type=lambda x: (str(x).lower() == "true"),
+    )
+    parser.add_argument("--text_recognizer_height", type=int, default=32)
+    parser.add_argument("--text_recognizer_width", type=int, default=320)
     args = parser.parse_args()
 
     main(args)

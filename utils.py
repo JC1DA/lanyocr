@@ -132,7 +132,6 @@ def check_area_merge(rrect1: LanyOcrRRect, rrect2: LanyOcrRRect, thresh=0.75):
     merged_rrect_area = merged_rrect[1][0] * merged_rrect[1][1]
 
     ratio = (rrect1_area + rrect2_area) / merged_rrect_area
-
     return ratio > thresh
 
 
@@ -168,6 +167,40 @@ def crop_rect(img, rrect):
 
     cropped_img = img[min_y:max_y, min_x:max_x, :]
     return np.array(cropped_img)
+
+
+# def crop_rrect(img, rrect, angle_thresh=5):
+#     if rrect[2] in [0, 90]:
+#         return crop_rect(img, rrect)
+
+#     # if rrect[2] < angle_thresh or rrect[2] > 90 - angle_thresh:
+#     #     return crop_rect(img, rrect)
+
+#     padding_size = int(max(rrect[1][0], rrect[1][1])) // 2
+#     padded_img = cv2.copyMakeBorder(
+#         img,
+#         padding_size,
+#         padding_size,
+#         padding_size,
+#         padding_size,
+#         cv2.BORDER_CONSTANT,
+#     )
+
+#     m = cv2.getRotationMatrix2D(
+#         (rrect[0][0] + padding_size, rrect[0][1] + padding_size), rrect[2], 1
+#     )
+
+#     rotated_img = cv2.warpAffine(
+#         padded_img, m, (padded_img.shape[1], padded_img.shape[0])
+#     )
+
+#     rect = cv2.getRectSubPix(
+#         rotated_img,
+#         (int(rrect[1][0]), int(rrect[1][1])),
+#         (int(rrect[0][0] + padding_size), int(rrect[0][1] + padding_size)),
+#     )
+
+#     return rect
 
 
 def crop_rrect(img, rrect):
@@ -211,3 +244,25 @@ def rotate_image(image, angle):
 def isascii(s):
     """Check if the characters in string s are in ASCII, U+0-U+7F."""
     return len(s.encode()) == len(s)
+
+
+def resize_img_to_height(img, model_height=32):
+    h = img.shape[0]
+    w = img.shape[1]
+
+    ratio = model_height / float(h)
+    _w = int(ratio * w)
+    return cv2.resize(img, (_w, model_height))
+
+
+def resize_img_to_width(img, model_width=320):
+    h = img.shape[0]
+    w = img.shape[1]
+
+    ratio = model_width / float(w)
+    _h = int(ratio * h)
+    return cv2.resize(img, (model_width, -h))
+
+
+def distance(p1, p2):
+    return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)

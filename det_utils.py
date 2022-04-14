@@ -182,6 +182,9 @@ def postprocess(
     max_img_size: int = 1536,
     text_threshold: float = 0.7,
     low_text_threshold: float = 0.33,
+    # configs to detect more texts
+    # text_threshold: float = 0.6,
+    # low_text_threshold: float = 0.25,
     link_text_threshold: float = 0.125,
 ):
     height, width = original_img.shape[:2]
@@ -354,18 +357,20 @@ def check_vertical_mergable(
 def check_horizontal_mergable(
     text_line: LanyOcrTextLine,
     rrect: LanyOcrRRect,
-    iou_thresh=0.01,
+    iou_thresh=0.0025,
 ) -> bool:
     last_rrect_in_line = text_line.sub_rrects[-1]
 
-    if not check_area_merge(last_rrect_in_line, rrect):
+    # print(last_rrect_in_line.rrect, rrect.rrect)
+
+    if not check_area_merge(last_rrect_in_line, rrect, thresh=0.7):
         return False
 
     min_hw = min(
         min(last_rrect_in_line.getWidth(), last_rrect_in_line.getHeight()),
         min(rrect.getWidth(), rrect.getHeight()),
     )
-    if abs(last_rrect_in_line.getCenterY() - rrect.getCenterY()) > 0.25 * min_hw:
+    if abs(last_rrect_in_line.getCenterY() - rrect.getCenterY()) > 0.35 * min_hw:
         return False
 
     last_rrect_bbox = last_rrect_in_line.getBoundingBox()
@@ -434,7 +439,8 @@ def merge_text_boxes_step(
             else:
                 not_merged_rrects.append(cur_rrect)
 
-        sorted_rrects.extend(not_merged_rrects)
+        # sorted_rrects.extend(not_merged_rrects)
+        sorted_rrects = not_merged_rrects
 
         if len(text_line.sub_rrects) > 1:
             multi_rrects_lines.append(text_line)

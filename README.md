@@ -6,6 +6,8 @@ LanyOCR automatically merges text boxes into lines even for rotated texts.
 
 ![alt text](outputs/output.jpg)
 
+![alt text](outputs/example2.jpg)
+
 # Getting Started
 ### Install dependencies
 ```
@@ -27,10 +29,12 @@ Faster version
 python detect_fast.py --merge_vertical true --merge_boxes_inference false --image_path images/example.jpg
 ```
 
-Even faster
+Even faster, a bit less accurate
 ```
 python detect_fast.py --merge_vertical true --merge_boxes_inference true --image_path images/example.jpg
 ```
+
+Output image will be in output/output.jpg
 
 ## Online API
 

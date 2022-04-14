@@ -32,6 +32,11 @@ Even faster
 python detect_fast.py --merge_vertical true --merge_boxes_inference true --image_path images/example.jpg
 ```
 
+## Online API
+
+You can try LanyOCR free on [RapidAPI](https://rapidapi.com/JC1DA/api/lanyocr)
+
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).

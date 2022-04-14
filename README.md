@@ -22,6 +22,16 @@ bash download_models.sh
 python detect.py --merge_vertical true --image_path images/example.jpg
 ```
 
+Faster version
+```
+python detect_fast.py --merge_vertical true --merge_boxes_inference false --image_path images/example.jpg
+```
+
+Even faster
+```
+python detect_fast.py --merge_vertical true --merge_boxes_inference true --image_path images/example.jpg
+```
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).

@@ -6,7 +6,10 @@ def resize_norm_img(img, image_shape, padding=True):
     imgC, imgH, imgW = image_shape
     h = img.shape[0]
     w = img.shape[1]
-    if not padding:
+
+    if h == imgH and w == imgW:
+        resized_image = img
+    elif not padding:
         resized_image = cv2.resize(img, (imgW, imgH), interpolation=cv2.INTER_LINEAR)
         resized_w = imgW
     else:

@@ -261,7 +261,7 @@ def resize_img_to_width(img, model_width=320):
 
     ratio = model_width / float(w)
     _h = int(ratio * h)
-    return cv2.resize(img, (model_width, -h))
+    return cv2.resize(img, (model_width, h))
 
 
 def distance(p1, p2):

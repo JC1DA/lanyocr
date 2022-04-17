@@ -22,7 +22,7 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Nxs")
+    parser = argparse.ArgumentParser(description="LanyOCR")
     parser.add_argument("--image_path", type=str, required=True)
     parser.add_argument("--output_path", type=str, default="./outputs/output.jpg")
     parser.add_argument(

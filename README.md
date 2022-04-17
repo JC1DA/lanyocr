@@ -38,7 +38,7 @@ You can try LanyOCR free on [RapidAPI](https://rapidapi.com/JC1DA/api/lanyocr)
 ## To Do
     [x] Abstract Class/Interface for each component
         [x] LanyOcrDetector: outputs locations of text boxes        
-        [x] LanyOcrCraftBasedMerger: merge text boxes into text lines
+        [x] LanyOcrMerger: merge text boxes into text lines
         [x] LanyOcrRecognizer: convert text boxes/lines into text
         [x] LanyOcrAngleClassifier: estimate the angle of a text box/line
 

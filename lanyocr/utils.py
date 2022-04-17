@@ -1,9 +1,11 @@
-from pydantic import BaseModel
-from enum import Enum
-from typing import Any, List, Tuple
+import os
 import cv2
 import math
 import numpy as np
+import requests
+from pydantic import BaseModel
+from enum import Enum
+from typing import Any, List, Tuple
 
 
 class LanyOcrMergeType(str, Enum):
@@ -77,6 +79,7 @@ class LanyOcrDirectionalBoxGroups(BaseModel):
 class LanyOcrTextLine(BaseModel):
     # rrect: LanyOcrRRect
     sub_rrects: List[LanyOcrRRect]
+    direction: str = ""
 
     def avgAngle(self) -> float:
         angles = [rrect.rrect[2] for rrect in self.sub_rrects]
@@ -92,9 +95,54 @@ class LanyOcrTextLine(BaseModel):
 
     def get_rrect(self):
         points = []
-        for rrect in self.sub_rrects:
-            points.extend(rrect.points)
+        if (
+            self.direction
+            in ["", LanyOcrMergeType.HORIZONTAL, LanyOcrMergeType.VERTICAL]
+            or len(self.sub_rrects) == 1
+        ):
+            for rrect in self.sub_rrects:
+                points.extend(rrect.points)
+        else:
+            points.extend(self.sub_rrects[0].points)
+            for rrect_idx in range(1, len(self.sub_rrects)):
+                rrect = self.sub_rrects[rrect_idx]
+
+                sum_xy = []
+                for p in rrect.points:
+                    sum_xy.append(p[0] + p[1])
+
+                sorted_points = [x for _, x in sorted(zip(sum_xy, rrect.points))]
+                points.append(sorted_points[-1])
+                points.append(sorted_points[-2])
+                points.append(sorted_points[-3])
+
+                # points.append([center_x + w // 2, center_y])
+                # points.append([center_x, center_y - h // 2])
+                # points.append([center_x, center_y + h // 2])
+
+                # if (
+                #     self.direction == LanyOcrMergeType.UPWARD
+                #     or self.direction == LanyOcrMergeType.DOWNWARD
+                # ):
+                # if rrect.getAngle() in [0, 90]:
+                #     # add point furthest to the right
+                #     for rrect_idx in range(1, len(self.sub_rrects)):
+                #         rrect = self.sub_rrects[rrect_idx]
+                #         sum_xy = []
+                #         for p in rrect.points:
+                #             sum_xy.append(p[0] + p[1])
+                #         max_idx = np.argmax(sum_xy)
+                #         points.append(rrect.points[max_idx])
+                # else:
+                #     points.extend(rrect.points)
+
         return cv2.minAreaRect(np.array([points]).astype(np.int32))
+
+
+class LanyOcrResult(BaseModel):
+    text: str
+    prob: float
+    line: LanyOcrTextLine
 
 
 def iou(box1: LanyOcrBoundingBox, box2: LanyOcrBoundingBox) -> float:
@@ -241,6 +289,12 @@ def rotate_image(image, angle):
     return result
 
 
+def rotate_image_at_center(image, center, angle):
+    rot_mat = cv2.getRotationMatrix2D(center, angle, 1.0)
+    result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    return result
+
+
 def isascii(s):
     """Check if the characters in string s are in ASCII, U+0-U+7F."""
     return len(s.encode()) == len(s)
@@ -266,3 +320,39 @@ def resize_img_to_width(img, model_width=320):
 
 def distance(p1, p2):
     return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
+
+def download_to_memory(url: str):
+    import requests
+
+    try:
+        r = requests.get(url, allow_redirects=True)
+        assert r.status_code == 200
+        return r.content
+    except Exception as e:
+        raise e
+
+
+def download_to_file(url: str, output_path: str):
+    try:
+        data = download_to_memory(url)
+        open(output_path, "wb").write(data)
+    except Exception as e:
+        raise e
+
+
+def download_model(model_file_name: str):
+    from pathlib import Path
+
+    LANYOCR_MODEL_DIR_PATH = os.path.join(Path.home(), ".LanyOCR")
+    if not os.path.exists(LANYOCR_MODEL_DIR_PATH):
+        os.makedirs(LANYOCR_MODEL_DIR_PATH)
+
+    url = f"https://lanytek.com/models/{model_file_name}"
+    output_path = os.path.join(LANYOCR_MODEL_DIR_PATH, model_file_name)
+
+    if not os.path.exists(output_path):
+        print(f"Downloading model to {output_path}")
+        download_to_file(url, output_path)
+
+    return output_path

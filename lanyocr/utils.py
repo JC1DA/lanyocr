@@ -116,26 +116,6 @@ class LanyOcrTextLine(BaseModel):
                 points.append(sorted_points[-2])
                 points.append(sorted_points[-3])
 
-                # points.append([center_x + w // 2, center_y])
-                # points.append([center_x, center_y - h // 2])
-                # points.append([center_x, center_y + h // 2])
-
-                # if (
-                #     self.direction == LanyOcrMergeType.UPWARD
-                #     or self.direction == LanyOcrMergeType.DOWNWARD
-                # ):
-                # if rrect.getAngle() in [0, 90]:
-                #     # add point furthest to the right
-                #     for rrect_idx in range(1, len(self.sub_rrects)):
-                #         rrect = self.sub_rrects[rrect_idx]
-                #         sum_xy = []
-                #         for p in rrect.points:
-                #             sum_xy.append(p[0] + p[1])
-                #         max_idx = np.argmax(sum_xy)
-                #         points.append(rrect.points[max_idx])
-                # else:
-                #     points.extend(rrect.points)
-
         return cv2.minAreaRect(np.array([points]).astype(np.int32))
 
 
@@ -215,40 +195,6 @@ def crop_rect(img, rrect):
 
     cropped_img = img[min_y:max_y, min_x:max_x, :]
     return np.array(cropped_img)
-
-
-# def crop_rrect(img, rrect, angle_thresh=5):
-#     if rrect[2] in [0, 90]:
-#         return crop_rect(img, rrect)
-
-#     # if rrect[2] < angle_thresh or rrect[2] > 90 - angle_thresh:
-#     #     return crop_rect(img, rrect)
-
-#     padding_size = int(max(rrect[1][0], rrect[1][1])) // 2
-#     padded_img = cv2.copyMakeBorder(
-#         img,
-#         padding_size,
-#         padding_size,
-#         padding_size,
-#         padding_size,
-#         cv2.BORDER_CONSTANT,
-#     )
-
-#     m = cv2.getRotationMatrix2D(
-#         (rrect[0][0] + padding_size, rrect[0][1] + padding_size), rrect[2], 1
-#     )
-
-#     rotated_img = cv2.warpAffine(
-#         padded_img, m, (padded_img.shape[1], padded_img.shape[0])
-#     )
-
-#     rect = cv2.getRectSubPix(
-#         rotated_img,
-#         (int(rrect[1][0]), int(rrect[1][1])),
-#         (int(rrect[0][0] + padding_size), int(rrect[0][1] + padding_size)),
-#     )
-
-#     return rect
 
 
 def crop_rrect(img, rrect):

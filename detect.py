@@ -35,7 +35,7 @@ if __name__ == "__main__":
         "--recognizer_name",
         type=str,
         default="paddleocr_en_server",
-        help='Name of recognizer, must be one of these ["paddleocr_en_server", "paddleocr_en_mobile"]',
+        help='Name of recognizer, must be one of these ["paddleocr_en_server", "paddleocr_en_mobile", "paddleocr_french_mobile", "paddleocr_latin_mobile"]',
     )
     parser.add_argument(
         "--merge_rotated_boxes",

@@ -8,6 +8,14 @@ MODULE_DICT = {
         "paddleocr_en_number_mobile_v2.py",
         "PaddleOcrEnNumberMobile",
     ],
+    "paddleocr_french_mobile": [
+        "paddleocr_french_mobile_v2.py",
+        "PaddleOcrFrenchMobile",
+    ],
+    "paddleocr_latin_mobile": [
+        "paddleocr_latin_mobile_v2.py",
+        "PaddleOcrLatinMobile",
+    ],
 }
 
 

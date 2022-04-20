@@ -29,7 +29,19 @@ Switch to different recognizer
 PYTHONPATH=. python detect.py --merge_rotated_boxes true --merge_vertical true --recognizer_name paddleocr_en_mobile --image_path images/example1.jpg
 ```
 
+Recognize other languages
+```
+PYTHONPATH=. python detect.py --merge_rotated_boxes true --merge_vertical true --recognizer_name paddleocr_french_mobile --image_path images/french_example1.jpg
+```
+
 Output image will be in outputs/output.jpg
+
+**Supported Languages**
+- English: paddleocr_en_server, paddleocr_en_mobile
+- French: paddleocr_french_mobile
+- Latin: paddleocr_latin_mobile
+
+**Note**: Some unicode characters cannot be visualized correctly by OpenCV, please find the text lines in the console log.
 
 ## Online API
 
@@ -43,9 +55,9 @@ You can try LanyOCR free on [RapidAPI](https://rapidapi.com/JC1DA/api/lanyocr)
         [x] LanyOcrAngleClassifier: estimate the angle of a text box/line
 
     [ ] Multi-languages support
-        [ ] French
+        [X] French        
+        [X] Latin
         [ ] German
-        [ ] Latin
 
     [ ] Inference using multi-models to improve accuracy
         [ ] Add interface to support voting policy

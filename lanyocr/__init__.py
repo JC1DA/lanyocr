@@ -1,22 +1,24 @@
 import math
 import os
+from typing import List
+
 import cv2
 import numpy as np
-from typing import List
+
 from lanyocr.angle_classifier import LanyOcrAngleClassifierFactory
-from lanyocr.text_detector import LanyOcrDetectorFactory
-from lanyocr.text_merger import LanyOcrMergerFactory
 from lanyocr.lanyocr_utils import (
-    LanyOcrRRect,
     LanyOcrResult,
+    LanyOcrRRect,
     LanyOcrTextLine,
     crop_rrect,
+    distance,
     resize_img_to_height,
     resize_img_to_width,
-    distance,
     rotate_image,
     rotate_image_at_center,
 )
+from lanyocr.text_detector import LanyOcrDetectorFactory
+from lanyocr.text_merger import LanyOcrMergerFactory
 from lanyocr.text_recognizer import LanyOcrRecognizerFactory
 
 
@@ -32,6 +34,15 @@ class LanyOcr:
         merge_vertical_boxes: bool = False,
         debug: bool = False,
     ) -> None:
+        if merge_boxes_inference and recognizer_name in [
+            "mmocr_satrn",
+            "mmocr_satrn_sm",
+        ]:
+            merge_boxes_inference = False
+            print(
+                f"Disabled merge_boxes_inference because {recognizer_name} could not recognize space character."
+            )
+
         self.detector = LanyOcrDetectorFactory.create(detector_name)
         self.recognizer = LanyOcrRecognizerFactory.create(recognizer_name)
         self.angle_classifier = LanyOcrAngleClassifierFactory.create(

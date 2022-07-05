@@ -16,12 +16,15 @@ MODULE_DICT = {
         "paddleocr_latin_mobile_v2.py",
         "PaddleOcrLatinMobile",
     ],
+    "mmocr_satrn": ["mmocr_satrn.py", "MMOCR_Satrn"],
+    "mmocr_satrn_sm": ["mmocr_satrn_sm.py", "MMOCR_Satrn_Sm"],
 }
 
 
 class LanyOcrRecognizer(ABC):
     def __init__(self, use_gpu: bool = True) -> None:
-        self.use_gpu = use_gpu
+        self.use_gpu: bool = use_gpu
+        self.max_batch_size: int = 1
 
     @abstractmethod
     def infer(self, image) -> Tuple[str, float]:
@@ -39,6 +42,9 @@ class LanyOcrRecognizer(ABC):
     def get_model_width(self) -> int:
         raise NotImplementedError
 
+    def set_max_batch_size(self, batch_size: int):
+        self.max_batch_size = batch_size
+
 
 class LanyOcrRecognizerFactory:
     @staticmethod
@@ -46,7 +52,8 @@ class LanyOcrRecognizerFactory:
         if name not in MODULE_DICT:
             raise ValueError("Invalid name")
 
-        import importlib, inspect
+        import importlib
+        import inspect
 
         cur_dir = os.path.dirname(os.path.realpath(__file__))
         module_name = name

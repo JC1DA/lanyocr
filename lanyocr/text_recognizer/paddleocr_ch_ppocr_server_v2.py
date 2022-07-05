@@ -1,9 +1,10 @@
-import os
 import json
+import os
+from typing import List, Tuple
+
 import numpy as np
-from typing import Tuple, List
-from lanyocr.text_recognizer.paddleocr_base import PaddleOcrBase
 from lanyocr.lanyocr_utils import download_model
+from lanyocr.text_recognizer.paddleocr_base import PaddleOcrBase
 
 
 class PaddleOcrChServer(PaddleOcrBase):
@@ -39,3 +40,5 @@ class PaddleOcrChServer(PaddleOcrBase):
             model_w,
             model_h,
         )
+
+        self.set_max_batch_size(8)

@@ -1,10 +1,11 @@
-import os
 import json
 import math
+import os
+from typing import List, Tuple
+
 import cv2
-import onnxruntime
 import numpy as np
-from typing import Tuple, List
+import onnxruntime
 from lanyocr.text_recognizer import LanyOcrRecognizer
 
 
@@ -57,13 +58,16 @@ class PaddleOcrBase(LanyOcrRecognizer):
         batch_results = []
         normed_imgs = [self.normalize_img(img) for img in bgr_images]
 
-        batch_preds = self.session.run(None, {"x": normed_imgs})[0]
+        for idx in range(0, len(normed_imgs), self.max_batch_size):
+            batch_preds = self.session.run(
+                None, {"x": normed_imgs[idx : idx + self.max_batch_size]}
+            )[0]
 
-        for preds in batch_preds:
-            preds_idx = preds.argmax(axis=1)
-            preds_prob = preds.max(axis=1)
-            results = self.decode([preds_idx], [preds_prob], True)
-            batch_results.append(results[0])
+            for preds in batch_preds:
+                preds_idx = preds.argmax(axis=1)
+                preds_prob = preds.max(axis=1)
+                results = self.decode([preds_idx], [preds_prob], True)
+                batch_results.append(results[0])
 
         return batch_results
 

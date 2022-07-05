@@ -34,3 +34,5 @@ class PaddleOcrLatinMobile(PaddleOcrBase):
             model_w,
             model_h,
         )
+
+        self.set_max_batch_size(8)

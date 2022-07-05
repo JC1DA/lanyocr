@@ -1,6 +1,6 @@
 from typing import List, Tuple
 from lanyocr.text_merger import LanyOcrMerger
-from lanyocr.utils import (
+from lanyocr.lanyocr_utils import (
     LanyOcrMergeType,
     LanyOcrRRect,
     LanyOcrTextLine,

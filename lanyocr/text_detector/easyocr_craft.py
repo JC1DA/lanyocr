@@ -4,7 +4,7 @@ import math
 import numpy as np
 from typing import List
 from lanyocr.text_detector import LanyOcrDetector
-from lanyocr.utils import LanyOcrRRect, download_model
+from lanyocr.lanyocr_utils import LanyOcrRRect, download_model
 
 
 class EasyOcrCraft(LanyOcrDetector):

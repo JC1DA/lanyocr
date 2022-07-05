@@ -3,7 +3,7 @@ import cv2
 import onnxruntime
 import numpy as np
 from lanyocr.angle_classifier import LanyOcrAngleClassifier
-from lanyocr.utils import download_model
+from lanyocr.lanyocr_utils import download_model
 
 
 class PaddleOcrAngleClassifierv2(LanyOcrAngleClassifier):

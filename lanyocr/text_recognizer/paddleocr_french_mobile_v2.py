@@ -3,7 +3,7 @@ import json
 import numpy as np
 from typing import Tuple, List
 from lanyocr.text_recognizer.paddleocr_base import PaddleOcrBase
-from lanyocr.utils import download_model
+from lanyocr.lanyocr_utils import download_model
 
 
 class PaddleOcrFrenchMobile(PaddleOcrBase):

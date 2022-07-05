@@ -2,7 +2,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import List, Tuple
 
-from lanyocr.utils import LanyOcrRRect
+from lanyocr.lanyocr_utils import LanyOcrRRect
 
 MODULE_DICT = {"easyocr_craft": ["easyocr_craft.py", "EasyOcrCraft"]}
 

@@ -6,7 +6,7 @@ from typing import List
 from lanyocr.angle_classifier import LanyOcrAngleClassifierFactory
 from lanyocr.text_detector import LanyOcrDetectorFactory
 from lanyocr.text_merger import LanyOcrMergerFactory
-from lanyocr.utils import (
+from lanyocr.lanyocr_utils import (
     LanyOcrRRect,
     LanyOcrResult,
     LanyOcrTextLine,

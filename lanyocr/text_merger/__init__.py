@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from typing import List, Tuple
-from lanyocr.utils import LanyOcrRRect, LanyOcrTextLine
+from lanyocr.lanyocr_utils import LanyOcrRRect, LanyOcrTextLine
 
 MODULE_DICT = {
     "lanyocr_craftbased": ["lanyocr_craft_merger.py", "LanyOcrCraftBasedMerger"]

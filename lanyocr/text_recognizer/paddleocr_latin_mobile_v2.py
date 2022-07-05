@@ -1,9 +1,10 @@
-import os
 import json
+import os
+from typing import List, Tuple
+
 import numpy as np
-from typing import Tuple, List
+from lanyocr.lanyocr_utils import download_model
 from lanyocr.text_recognizer.paddleocr_base import PaddleOcrBase
-from lanyocr.utils import download_model
 
 
 class PaddleOcrLatinMobile(PaddleOcrBase):

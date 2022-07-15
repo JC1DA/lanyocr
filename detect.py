@@ -1,5 +1,6 @@
 import argparse
 from lanyocr import LanyOcr
+from benchmarker import LanyBenchmarkerICDAR2015
 
 
 def main(args):

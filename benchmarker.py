@@ -1,22 +1,16 @@
+import os
 from abc import ABC, abstractmethod
 from enum import Enum
 
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+from numpy import array
 from pydantic import BaseModel
-
-from lanyocr import LanyOcr
-
-import os
-
 from shapely.geometry import Polygon
 
-import matplotlib.pyplot as plt
-
-from numpy import array
-import numpy as np
-
-import seaborn as sns
-
-import cv2
+from lanyocr import LanyOcr
 
 
 class DatasetType(str, Enum):
@@ -69,30 +63,43 @@ class LanyBenchmarker(ABC):
 
             All the datasets should share the same functions to compute accuracy.
         """
+
+        # FIXME: Move this to LanyBenchmarkerICDAR2015, this method should not be implemented.
+        # what if we need to do benchmark on another dataset with different format???
+        # FIXME: think about a good data-structure so we can reuse the output of this for many different types of dataset
+
         name = []
-        for filename in os.listdir(self.dataset_path + '/images'):
+        for filename in os.listdir(self.dataset_path + "/images"):
             if filename.endswith(".jpg"):
                 name.append(os.path.join(filename))
             else:
                 continue
-        name = [x.replace('.jpg', '') for x in name]
+        name = [x.replace(".jpg", "") for x in name]
+
+        # FIXME: we are loading all images into memory? what if the dataset is too big?
         for index in name:
-            picture = cv2.imread(f'{self.dataset_path}/images/{index}.jpg')
-            with open(f'{self.dataset_path}/validation/gt_{index}.txt', "r") as f:
-                data = f.read().replace('ï»¿', '')
-                data = data.split('\n')
-                data.remove('')
+            picture = cv2.imread(f"{self.dataset_path}/images/{index}.jpg")
+            with open(f"{self.dataset_path}/validation/gt_{index}.txt", "r") as f:
+                data = f.read().replace("ï»¿", "")
+                data = data.split("\n")
+                data.remove("")
                 data.sort()
                 polygon_list = []
                 for index in data:
-                    temp_point_split = index.split(',')
+                    temp_point_split = index.split(",")
                     temp_point = [float(temp_point_split[x]) for x in range(8)]
-                    polygon = Polygon([(temp_point[0], temp_point[1]), (temp_point[2], temp_point[3]),
-                                       (temp_point[4], temp_point[5]), (temp_point[6], temp_point[7])])
+                    polygon = Polygon(
+                        [
+                            (temp_point[0], temp_point[1]),
+                            (temp_point[2], temp_point[3]),
+                            (temp_point[4], temp_point[5]),
+                            (temp_point[6], temp_point[7]),
+                        ]
+                    )
                     if len(temp_point_split) == 9:
                         polygon_list.append([polygon, temp_point_split[8]])
                     else:
-                        polygon_list.append([polygon, ' '])
+                        polygon_list.append([polygon, " "])
             self.dataset.append([picture, polygon_list])
         # raise NotImplementedError
 
@@ -116,11 +123,22 @@ class LanyBenchmarker(ABC):
             polygon_list = []
             for result in results:
                 point = result.points
-                polygon_list.append(Polygon([tuple(point[0]), tuple(point[1]),
-                                             tuple(point[2]), tuple(point[3])]))
+                polygon_list.append(
+                    Polygon(
+                        [
+                            tuple(point[0]),
+                            tuple(point[1]),
+                            tuple(point[2]),
+                            tuple(point[3]),
+                        ]
+                    )
+                )
             for polygon in index[1]:
+                # FIXME: what is flag2??? pick a meaningful name for this?
                 flag_2 = False
-                if polygon[1] == '###':
+                iou = 0.0
+
+                if polygon[1] == "###":
                     pass
                 else:
                     for polygon_2 in polygon_list:
@@ -129,8 +147,10 @@ class LanyBenchmarker(ABC):
                             intersect = polygon[0].intersection(polygon_2).area
                             union = polygon[0].union(polygon_2).area
                             iou = intersect / union
-                if not flag_2:
-                    iou = 0.0
+
+                # NOTE: move iou = 0 to the head of this block, easier to read, it would fix "unbounded warnings"
+                # if not flag_2:
+                #    iou = 0.0
                 IOU_list.append(iou)
             self.bounding.append(polygon_list)
         final_IOU = array(IOU_list)
@@ -178,12 +198,14 @@ class LanyBenchmarker(ABC):
             text_predict = self.ocr.infer(index[0])
             for text in text_predict:
                 point = text.line.sub_rrects[0].points
-                polygon = Polygon([tuple(point[0]), tuple(point[1]),
-                                   tuple(point[2]), tuple(point[3])])
+                polygon = Polygon(
+                    [tuple(point[0]), tuple(point[1]), tuple(point[2]), tuple(point[3])]
+                )
                 polygon_list_predict.append([polygon, text.text])
             for polygon in index[1]:
+                # FIXME: again, what is flag2??? pick a meaningful name for this?
                 flag_2 = False
-                if polygon[1] == '###':
+                if polygon[1] == "###":
                     pass
                 else:
                     for polygon_2 in polygon_list_predict:
@@ -193,12 +215,21 @@ class LanyBenchmarker(ABC):
                             union = polygon[0].union(polygon_2[0]).area
                             iou = intersect / union
                             if len(polygon[1]) != 0:
-                                precision = len([(i, j) for i, j in zip(polygon[1], polygon_2[1]) if i == j]) / len(
-                                    polygon_2[1])
-                                recall = len([i for i in polygon_2[1] if i in polygon[1]]) / len(polygon_2[1])
+                                precision = len(
+                                    [
+                                        (i, j)
+                                        for i, j in zip(polygon[1], polygon_2[1])
+                                        if i == j
+                                    ]
+                                ) / len(polygon_2[1])
+                                recall = len(
+                                    [i for i in polygon_2[1] if i in polygon[1]]
+                                ) / len(polygon_2[1])
                             else:
                                 precision = 0
                                 recall = 0
+
+                    # FIXME: move this to head of this block if possible
                     if not flag_2:
                         precision = 0
                         recall = 0
@@ -212,7 +243,7 @@ class LanyBenchmarker(ABC):
         accuracy_results.precision = final_precision.mean()
         accuracy_results.recall = final_recall.mean()
         accuracy_results.IOU = final_IOU.mean()
-        print(accuracy_results.recall, accuracy_results.precision,accuracy_results.IOU)
+        print(accuracy_results.recall, accuracy_results.precision, accuracy_results.IOU)
         return accuracy_results
 
 
@@ -229,7 +260,7 @@ class LanyBenchmarkerICDAR2017(LanyBenchmarker):
 
 
 ocr = LanyOcr()
-test = LanyBenchmarkerICDAR2015(ocr, './ICDAR/2015')
+test = LanyBenchmarkerICDAR2015(ocr, "./datasets/ICDAR/2015")
 data = test.load_dataset()
 test.compute_recognizer_accuracy()
 print(1)

@@ -158,8 +158,8 @@ class LanyBenchmarker(ABC):
                 crop = np.array([points]).astype(int)
                 rect = cv2.boundingRect(crop)
                 x, y, w, h = rect
-                croped = index[0][y : y + h, x : x + w].copy()
-                predict = self.ocr.recognizer.infer(croped)[0]
+                cropped = index[0][y: y + h, x: x + w].copy()
+                predict = self.ocr.recognizer.infer(cropped)[0]
                 if polygon[1] != "###" and len(predict) != 0:
                     precision = len(
                         [(i, j) for i, j in zip(polygon[1], predict) if i == j]
@@ -310,26 +310,26 @@ class LanyBenchmarkerICDAR2017(LanyBenchmarker):
         images = json_data["imgs"]
         imgToAnns = json_data["imgToAnns"]
         anns = json_data["anns"]
-        polygon_list = []
-        for images_keys in list(images.keys()):
+        for images_keys in list(images.keys())[:2000]:
+            polygon_list = []
             image_information = images[images_keys]
             image_name = image_information["file_name"]
             picture = cv2.imread(f"{self.dataset_path}/images/{image_name}")
             image_to_anns_list = imgToAnns[images_keys]
             for keys in image_to_anns_list:
-                polygon_point = anns[str(keys)]["polygon"]
-                polygon = Polygon(
-                    [
-                        (polygon_point[0], polygon_point[1]),
-                        (polygon_point[2], polygon_point[3]),
-                        (polygon_point[4], polygon_point[5]),
-                        (polygon_point[6], polygon_point[7]),
-                    ]
-                )
-                validation_text = "###"
-                if "utf8_string" in anns[str(keys)]:
-                    validation_text = anns[str(keys)]["utf8_string"]
-                polygon_list.append([polygon, validation_text])
+                    polygon_point = anns[str(keys)]["polygon"]
+                    polygon = Polygon(
+                        [
+                            (polygon_point[0], polygon_point[1]),
+                            (polygon_point[2], polygon_point[3]),
+                            (polygon_point[4], polygon_point[5]),
+                            (polygon_point[6], polygon_point[7]),
+                        ]
+                    )
+                    validation_text  = "###"
+                    if "utf8_string" in anns[str(keys)]:
+                        validation_text = anns[str(keys)]["utf8_string"]
+                    polygon_list.append([polygon, validation_text])
             self.dataset.append([picture, polygon_list])
             print(image_name)
         print(test)
@@ -337,7 +337,7 @@ class LanyBenchmarkerICDAR2017(LanyBenchmarker):
 
 
 ocr = LanyOcr()
-test = LanyBenchmarkerICDAR2015(ocr, "./datasets/ICDAR/2015")
+test = LanyBenchmarkerICDAR2017(ocr, "./datasets/ICDAR/2017")
 data = test.load_dataset()
 print(1)
 test.compute_recognizer_accuracy()

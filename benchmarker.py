@@ -1,3 +1,4 @@
+import json
 import os
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -11,8 +12,6 @@ from pydantic import BaseModel
 from shapely.geometry import Polygon
 
 from lanyocr import LanyOcr
-
-import json
 
 
 class DatasetType(str, Enum):
@@ -124,8 +123,9 @@ class LanyBenchmarker(ABC):
                             union = polygon[0].union(polygon_2).area
                             iou = intersect / union
                             IOU_temp.append(iou)
-                # NOTE: move iou = 0 to the head of this block, easier to read, it would fix "unbounded warnings"
-                IOU_list.append(max(IOU_temp))
+
+                    # FIXME: what if polygon[1] == "###", where is IOU_temp??? should we just move to this block and ignore if label is ###, otherwise the iou would be 0 for this unused label???
+                    IOU_list.append(max(IOU_temp))
             self.bounding.append(polygon_list)
         final_IOU = array(IOU_list)
         dectector_results.IOU = final_IOU.mean()
@@ -285,8 +285,13 @@ class LanyBenchmarkerICDAR2015(LanyBenchmarker):
                 continue
         name = [x.replace(".jpg", "") for x in name]
         for index in name:
+            # FIXME: why are you keep reading all the images into memory?
             picture = cv2.imread(f"{self.dataset_path}/images/{index}.jpg")
-            with open(f"{self.dataset_path}/validation/gt_{index}.txt", "r") as f:
+            with open(
+                f"{self.dataset_path}/validation/gt_{index}.txt",
+                "r",
+                encoding="utf-8-sig",  # add encoding to fix some unknown characters on Linux
+            ) as f:
                 data = f.read().replace("ï»¿", "")
                 data = data.split("\n")
                 data.remove("")
@@ -324,6 +329,8 @@ class LanyBenchmarkerICDAR2017(LanyBenchmarker):
             polygon_list = []
             image_information = images[images_keys]
             image_name = image_information["file_name"]
+
+            # FIXME: why are you keep reading all the images into memory?
             picture = cv2.imread(f"{self.dataset_path}/images/{image_name}")
             image_to_anns_list = imgToAnns[images_keys]
             for keys in image_to_anns_list:
@@ -347,7 +354,9 @@ class LanyBenchmarkerICDAR2017(LanyBenchmarker):
 
 
 ocr = LanyOcr()
-test = LanyBenchmarkerICDAR2017(ocr, "./datasets/ICDAR/2017")
+# test = LanyBenchmarkerICDAR2017(ocr, "./datasets/ICDAR/2017")
+test = LanyBenchmarkerICDAR2015(ocr, "./datasets/ICDAR/2015")
 data = test.load_dataset()
 print(1)
-test.compute_e2e_accuracy()
+# test.compute_e2e_accuracy()
+test.compute_detector_accuracy()

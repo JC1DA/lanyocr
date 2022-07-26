@@ -247,7 +247,7 @@ class LanyOcr:
         # determine if a text is 180 degrees flipped or not
         line_flipped = self._is_line_flipped(line_img, 0.925)
         if line_flipped:
-            line_img = cv2.rotate(line_img, cv2.cv2.ROTATE_180)
+            line_img = cv2.rotate(line_img, cv2.ROTATE_180)
 
         merged_sub_rrect_list: List[List[LanyOcrRRect]] = []
         merged_imgs: List = []

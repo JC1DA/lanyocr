@@ -117,14 +117,15 @@ class LanyBenchmarker(ABC):
                 if polygon[1] == "###":
                     pass
                 else:
+                    IOU_temp = [iou]
                     for polygon_2 in polygon_list:
                         if polygon[0].intersects(polygon_2):
                             intersect = polygon[0].intersection(polygon_2).area
                             union = polygon[0].union(polygon_2).area
                             iou = intersect / union
-
+                            IOU_temp.append(iou)
                 # NOTE: move iou = 0 to the head of this block, easier to read, it would fix "unbounded warnings"
-                IOU_list.append(iou)
+                IOU_list.append(max(IOU_temp))
             self.bounding.append(polygon_list)
         final_IOU = array(IOU_list)
         dectector_results.IOU = final_IOU.mean()
@@ -158,7 +159,7 @@ class LanyBenchmarker(ABC):
                 crop = np.array([points]).astype(int)
                 rect = cv2.boundingRect(crop)
                 x, y, w, h = rect
-                cropped = index[0][y: y + h, x: x + w].copy()
+                cropped = index[0][y : y + h, x : x + w].copy()
                 predict = self.ocr.recognizer.infer(cropped)[0]
                 if polygon[1] != "###" and len(predict) != 0:
                     precision = len(
@@ -203,35 +204,44 @@ class LanyBenchmarker(ABC):
                 )
                 polygon_list_predict.append([polygon, text.text])
             for polygon in index[1]:
-                # FIXME: again, what is flag2??? pick a meaningful name for this?
+                precision = 0
+                recall = 0
+                iou = 0
                 if polygon[1] == "###":
                     pass
                 else:
+                    IOU_temp = [iou]
+                    Polygon_temp = []
                     for polygon_2 in polygon_list_predict:
-                        precision = 0
-                        recall = 0
-                        iou = 0
                         if polygon[0].intersects(polygon_2[0]):
                             intersect = polygon[0].intersection(polygon_2[0]).area
                             union = polygon[0].union(polygon_2[0]).area
                             iou = intersect / union
-                            if len(polygon[1]) != 0:
-                                precision = len(
-                                    [
-                                        (i, j)
-                                        for i, j in zip(polygon[1], polygon_2[1])
-                                        if i == j
-                                    ]
-                                ) / len(polygon_2[1])
-                                recall = len(
-                                    [i for i in polygon_2[1] if i in polygon[1]]
-                                ) / len(polygon_2[1])
-                            else:
-                                precision = 0
-                                recall = 0
-                    precision_list.append(precision)
+                            IOU_temp.append(iou)
+                            Polygon_temp.append(polygon_2)
+                    max_IOU = max(IOU_temp)
+                    IOU_list.append(max_IOU)
+                    max_index = IOU_temp.index(max_IOU)
+                    if max_IOU == 0:
+                        pass
+                    else:
+                        polygon_2 = polygon_list_predict[max_index - 1]
+                        if len(polygon[1]) != 0:
+                            precision = len(
+                                [
+                                    (i, j)
+                                    for i, j in zip(polygon[1], polygon_2[1])
+                                    if i == j
+                                ]
+                            ) / len(polygon_2[1])
+                            recall = len(
+                                [i for i in polygon_2[1] if i in polygon[1]]
+                            ) / len(polygon_2[1])
+                        else:
+                            precision = 0
+                            recall = 0
                     recall_list.append(recall)
-                    IOU_list.append(iou)
+                    precision_list.append(precision)
         final_precision = array(precision_list)
         final_recall = array(recall_list)
         final_IOU = array(IOU_list)
@@ -317,19 +327,19 @@ class LanyBenchmarkerICDAR2017(LanyBenchmarker):
             picture = cv2.imread(f"{self.dataset_path}/images/{image_name}")
             image_to_anns_list = imgToAnns[images_keys]
             for keys in image_to_anns_list:
-                    polygon_point = anns[str(keys)]["polygon"]
-                    polygon = Polygon(
-                        [
-                            (polygon_point[0], polygon_point[1]),
-                            (polygon_point[2], polygon_point[3]),
-                            (polygon_point[4], polygon_point[5]),
-                            (polygon_point[6], polygon_point[7]),
-                        ]
-                    )
-                    validation_text  = "###"
-                    if "utf8_string" in anns[str(keys)]:
-                        validation_text = anns[str(keys)]["utf8_string"]
-                    polygon_list.append([polygon, validation_text])
+                polygon_point = anns[str(keys)]["polygon"]
+                polygon = Polygon(
+                    [
+                        (polygon_point[0], polygon_point[1]),
+                        (polygon_point[2], polygon_point[3]),
+                        (polygon_point[4], polygon_point[5]),
+                        (polygon_point[6], polygon_point[7]),
+                    ]
+                )
+                validation_text = "###"
+                if "utf8_string" in anns[str(keys)]:
+                    validation_text = anns[str(keys)]["utf8_string"]
+                polygon_list.append([polygon, validation_text])
             self.dataset.append([picture, polygon_list])
             print(image_name)
         print(test)
@@ -340,4 +350,4 @@ ocr = LanyOcr()
 test = LanyBenchmarkerICDAR2017(ocr, "./datasets/ICDAR/2017")
 data = test.load_dataset()
 print(1)
-test.compute_recognizer_accuracy()
+test.compute_e2e_accuracy()

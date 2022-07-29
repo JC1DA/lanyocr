@@ -37,14 +37,14 @@ class OcrAccuracy(BaseModel):
     # add more or remove if needed
 
 
-class LanyBenchmarker(ABC):
+class LanyBenchmarker:
     def __init__(self, ocr: LanyOcr, dataset_path: str) -> None:
         self.dataset = []
+        self.metadata = []
         self.ocr = ocr
         self.dataset_path = dataset_path
         self.bounding = []
         self.predict = []
-        self.chunk_size = 0
 
     @abstractmethod
     def load_dataset(self):
@@ -97,7 +97,9 @@ class LanyBenchmarker(ABC):
         dectector_results = DetectorAccuracy
         IOU_list = []
         for index in self.dataset:
-            results = self.ocr.detector.infer(index[0])
+            print(f'{self.dataset_path}/{index["image_name"]}')
+            picture = cv2.imread(f'{self.dataset_path}/{index["image_name"]}')
+            results = self.ocr.detector.infer(picture)
             polygon_list = []
             for result in results:
                 point = result.points
@@ -111,21 +113,17 @@ class LanyBenchmarker(ABC):
                         ]
                     )
                 )
-            for polygon in index[1]:
+            for validation_text in index["text"]:
+                polygon = validation_text["vertices"]
                 iou = 0.0
-                if polygon[1] == "###":
-                    pass
-                else:
-                    IOU_temp = [iou]
-                    for polygon_2 in polygon_list:
-                        if polygon[0].intersects(polygon_2):
-                            intersect = polygon[0].intersection(polygon_2).area
-                            union = polygon[0].union(polygon_2).area
-                            iou = intersect / union
-                            IOU_temp.append(iou)
-
-                    # FIXME: what if polygon[1] == "###", where is IOU_temp??? should we just move to this block and ignore if label is ###, otherwise the iou would be 0 for this unused label???
-                    IOU_list.append(max(IOU_temp))
+                IOU_temp = [iou]
+                for polygon_2 in polygon_list:
+                    if polygon.intersects(polygon_2):
+                        intersect = polygon.intersection(polygon_2).area
+                        union = polygon.union(polygon_2).area
+                        iou = intersect / union
+                        IOU_temp.append(iou)
+                IOU_list.append(max(IOU_temp))
             self.bounding.append(polygon_list)
         final_IOU = array(IOU_list)
         dectector_results.IOU = final_IOU.mean()
@@ -149,17 +147,19 @@ class LanyBenchmarker(ABC):
         recall_list = []
         recognizer_accuracy = RecognizerAccuracy
         for index in self.dataset:
-            polygon_list = index[1]
+            text_list = index["text"]
+            polygon_list = [
+                [text["vertices"], text["transcription"]] for text in text_list
+            ]
+            picture = cv2.imread(f'{self.dataset_path}/{index["image_name"]}')
             for polygon in polygon_list:
-                precision = 0
-                recall = 0
                 x, y = polygon[0].exterior.coords.xy
                 points = [list(point) for point in zip(x, y)]
                 del points[-1]
                 crop = np.array([points]).astype(int)
                 rect = cv2.boundingRect(crop)
                 x, y, w, h = rect
-                cropped = index[0][y : y + h, x : x + w].copy()
+                cropped = picture[y : y + h, x : x + w].copy()
                 predict = self.ocr.recognizer.infer(cropped)[0]
                 if polygon[1] != "###" and len(predict) != 0:
                     precision = len(
@@ -196,14 +196,19 @@ class LanyBenchmarker(ABC):
         IOU_list = []
         for index in self.dataset:
             polygon_list_predict = []
-            text_predict = self.ocr.infer(index[0])
+            picture = cv2.imread(f'{self.dataset_path}/{index["image_name"]}')
+            text_predict = self.ocr.infer(picture)
+            text_list = index["text"]
+            polygon_list = [
+                [text["vertices"], text["transcription"]] for text in text_list
+            ]
             for text in text_predict:
                 point = text.line.sub_rrects[0].points
                 polygon = Polygon(
                     [tuple(point[0]), tuple(point[1]), tuple(point[2]), tuple(point[3])]
                 )
                 polygon_list_predict.append([polygon, text.text])
-            for polygon in index[1]:
+            for polygon in polygon_list:
                 precision = 0
                 recall = 0
                 iou = 0
@@ -251,90 +256,29 @@ class LanyBenchmarker(ABC):
         print(accuracy_results.recall, accuracy_results.precision, accuracy_results.IOU)
         return accuracy_results
 
-    def check_random(self):
-        result_list = []
-        for i in range(20):
-            temp = []
-            for index in self.dataset:
-                print(i)
-                predict = self.ocr.infer(index[0])
-                result_predict = []
-                for result in predict:
-                    result_predict.append(result.text)
-                temp.append(result_predict)
-            # with open(f'test_{i}.txt', 'w') as f:
-            #     for data in temp:
-            #         f.writelines('-'.join(data))
-            #         f.write('\n')
-            result_list.append(temp)
-        print("Checking ............")
-        for i in range(len(result_list) - 1):
-            if result_list[i] != result_list[i + 1]:
-                print(i, i + 1, False)
-        print("GOOD")
 
 
 class LanyBenchmarkerICDAR2015(LanyBenchmarker):
     def load_dataset(self):
-        # TODO: implement load function here
-        name = []
-        for filename in os.listdir(self.dataset_path + "/images"):
-            if filename.endswith(".jpg"):
-                name.append(os.path.join(filename))
-            else:
-                continue
-        name = [x.replace(".jpg", "") for x in name]
-        for index in name:
-            # FIXME: why are you keep reading all the images into memory?
-            picture = cv2.imread(f"{self.dataset_path}/images/{index}.jpg")
-            with open(
-                f"{self.dataset_path}/validation/gt_{index}.txt",
-                "r",
-                encoding="utf-8-sig",  # add encoding to fix some unknown characters on Linux
-            ) as f:
-                data = f.read().replace("ï»¿", "")
-                data = data.split("\n")
-                data.remove("")
-                data.sort()
-                polygon_list = []
-                for index in data:
-                    temp_point_split = index.split(",")
-                    temp_point = [float(temp_point_split[x]) for x in range(8)]
-                    polygon = Polygon(
-                        [
-                            (temp_point[0], temp_point[1]),
-                            (temp_point[2], temp_point[3]),
-                            (temp_point[4], temp_point[5]),
-                            (temp_point[6], temp_point[7]),
-                        ]
-                    )
-                    if len(temp_point_split) == 9:
-                        polygon_list.append([polygon, temp_point_split[8]])
-                    else:
-                        polygon_list.append([polygon, " "])
-            self.dataset.append([picture, polygon_list])
-        return super().load_dataset()
-
-
-class LanyBenchmarkerICDAR2017(LanyBenchmarker):
-    def load_dataset(self):
-        # TODO: implement load function here
-        f = open(f"{self.dataset_path}/validation/COCO_Text.json")
-        json_data = json.load(f)
-        f.close()
-        images = json_data["imgs"]
-        imgToAnns = json_data["imgToAnns"]
-        anns = json_data["anns"]
-        for images_keys in list(images.keys())[:2000]:
-            polygon_list = []
-            image_information = images[images_keys]
-            image_name = image_information["file_name"]
-
-            # FIXME: why are you keep reading all the images into memory?
-            picture = cv2.imread(f"{self.dataset_path}/images/{image_name}")
-            image_to_anns_list = imgToAnns[images_keys]
-            for keys in image_to_anns_list:
-                polygon_point = anns[str(keys)]["polygon"]
+        f_train = open(f"{self.dataset_path}/metadata/tie_train_v1.json")
+        f_val = open(f"{self.dataset_path}/metadata/tie_val_v1.json")
+        train_metadata = json.load(f_train)
+        val_metadata = json.load(f_val)
+        f_train.close()
+        f_val.close()
+        ICDAR2015_train_metadata = [
+            index for index in train_metadata if index["dataset"] == "icdar15"
+        ]
+        ICDAR2015_val_metadata = [
+            index for index in val_metadata if index["dataset"] == "icdar15"
+        ]
+        ICDAR2015_val_metadata.extend(ICDAR2015_train_metadata)
+        for index in ICDAR2015_val_metadata:
+            text = index["text"]
+            for sample in text:
+                polygon_point = [
+                    item for points in sample["vertices"] for item in points
+                ]
                 polygon = Polygon(
                     [
                         (polygon_point[0], polygon_point[1]),
@@ -343,20 +287,57 @@ class LanyBenchmarkerICDAR2017(LanyBenchmarker):
                         (polygon_point[6], polygon_point[7]),
                     ]
                 )
-                validation_text = "###"
-                if "utf8_string" in anns[str(keys)]:
-                    validation_text = anns[str(keys)]["utf8_string"]
-                polygon_list.append([polygon, validation_text])
-            self.dataset.append([picture, polygon_list])
-            print(image_name)
-        print(test)
+                sample["vertices"] = polygon
+            index["text"] = text
+        self.dataset = ICDAR2015_val_metadata
+        print("LOAD DONE")
+        return super().load_dataset()
+
+
+class LanyBenchmarkerICDAR2017(LanyBenchmarker):
+    def load_dataset(self):
+        f_train = open(f"{self.dataset_path}/metadata/tie_train_v1.json")
+        f_val = open(f"{self.dataset_path}/metadata/tie_val_v1.json")
+        train_metadata = json.load(f_train)
+        val_metadata = json.load(f_val)
+        f_train.close()
+        f_val.close()
+        print(len(train_metadata))
+        print(len(val_metadata))
+        ICDAR2017_train_metadata = [
+            index for index in train_metadata if index["dataset"] == "cocotext"
+        ]
+        ICDAR2017_val_metadata = [
+            index for index in val_metadata if index["dataset"] == "cocotext"
+        ]
+        ICDAR2017_val_metadata.extend(ICDAR2017_train_metadata)
+        del f_train
+        del f_val
+        for index in ICDAR2017_val_metadata:
+            text = index["text"]
+            for sample in text:
+                polygon_point = [
+                    item for points in sample["vertices"] for item in points
+                ]
+                polygon = Polygon(
+                    [
+                        (polygon_point[0], polygon_point[1]),
+                        (polygon_point[2], polygon_point[3]),
+                        (polygon_point[4], polygon_point[5]),
+                        (polygon_point[6], polygon_point[7]),
+                    ]
+                )
+                sample["vertices"] = polygon
+            index["text"] = text
+        self.dataset = ICDAR2017_val_metadata
+        print("LOAD DONE")
         return super().load_dataset()
 
 
 ocr = LanyOcr()
-# test = LanyBenchmarkerICDAR2017(ocr, "./datasets/ICDAR/2017")
-test = LanyBenchmarkerICDAR2015(ocr, "./datasets/ICDAR/2015")
+test = LanyBenchmarkerICDAR2015(ocr, "./datasets")
 data = test.load_dataset()
 print(1)
-# test.compute_e2e_accuracy()
-test.compute_detector_accuracy()
+test.compute_e2e_accuracy()
+# METADATA CAN SUPPORT FOLLOWING DATASET
+# ['hiertext', 'textocr', 'icdar13', 'icdar15', 'mlt19', 'cocotext', 'openimages']

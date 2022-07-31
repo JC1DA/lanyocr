@@ -13,8 +13,8 @@ from numpy import array
 from pydantic import BaseModel
 from shapely.geometry import Polygon
 
-from benchmarker_utils import evaluate_method
 from lanyocr import LanyOcr
+from lanyocr.lanyocr_utils import crop_rect
 
 
 class DatasetType(str, Enum):
@@ -120,6 +120,8 @@ class LanyBenchmarker(ABC):
 
             self.id2preds[id] = result_str.encode()
 
+        from decoder_utils import evaluate_method
+
         results = evaluate_method(self.id2gts, self.id2preds)
 
         return DetectorAccuracy(
@@ -140,7 +142,62 @@ class LanyBenchmarker(ABC):
             - run self.ocr.recognizer.infer(...) on all text images to predict text
             - return accuracy in the form of RecognizerAccuracy
         """
-        pass
+
+        _id2preds = {}
+
+        for id in self.id2imagePath:
+            image_path = self.id2imagePath[id]
+            image = cv2.imread(image_path)
+
+            result_str = ""
+            gts = self.id2gts[id].decode().split("\n")
+            for gt_idx, gt in enumerate(gts):
+                if gt == "":
+                    continue
+
+                parts = gt.split(",")
+                if parts[8] == "###":
+                    # don't care
+                    continue
+
+                points = np.array([int(s) for s in parts[:8]]).reshape([1, 4, 2])
+                rect = cv2.minAreaRect(points)
+                # sub_img = crop_rect(image, rect)
+                sub_img = self._crop_rect(image, rect)
+
+                h, w = sub_img.shape[:2]
+
+                if h == 0 or w == 0:
+                    continue
+
+                if h > 1.5 * w:
+                    sub_img = cv2.rotate(sub_img, cv2.ROTATE_90_CLOCKWISE)
+
+                # if self.ocr.angle_classifier.infer(sub_img) == 180:
+                #     sub_img = cv2.rotate(sub_img, cv2.ROTATE_180)
+
+                text_pred, _ = self.ocr.recognizer.infer(sub_img)
+
+                # print(id, gt, text_pred)
+                # if parts[8] != text_pred:
+                #     print(id, gt, text_pred)
+                #     # cv2.imwrite(f"./tmp/{id}_{gt_idx}.jpg", sub_img)
+
+                for i in range(8):
+                    result_str += parts[i] + ","
+                result_str += text_pred + "\n"
+
+            _id2preds[id] = result_str.encode()
+
+        from ocr_utils import evaluate_method
+
+        results = evaluate_method(self.id2gts, _id2preds)
+
+        return DetectorAccuracy(
+            precision=results["method"]["precision"],
+            recall=results["method"]["recall"],
+            hmean=results["method"]["hmean"],
+        )
 
     def compute_e2e_accuracy(self) -> OcrAccuracy:
         """Compute the end-to-end accuracy of the ocr
@@ -154,7 +211,55 @@ class LanyBenchmarker(ABC):
             - return the accuracy in form of OcrAccuracy
         """
 
-        pass
+        # disable merge inference when running benchmark
+        ocr.merge_boxes_inference = False
+
+        for id in self.id2imagePath:
+            image_path = self.id2imagePath[id]
+            image = cv2.imread(image_path)
+
+            ocr_lines = ocr.infer(image)
+
+            result_str = ""
+            for line in ocr_lines:
+                for det_result in line.line.sub_rrects:
+                    points = det_result.points
+                    if len(points) != 4:
+                        pass
+
+                    result_str += "{},{},".format(int(points[0][0]), int(points[0][1]))
+                    result_str += "{},{},".format(int(points[1][0]), int(points[1][1]))
+                    result_str += "{},{},".format(int(points[2][0]), int(points[2][1]))
+                    result_str += "{},{},".format(int(points[3][0]), int(points[3][1]))
+                    result_str += det_result.text + "\n"
+
+            self.id2preds[id] = result_str.encode()
+
+        from ocr_utils import evaluate_method
+
+        results = evaluate_method(self.id2gts, self.id2preds)
+
+        return DetectorAccuracy(
+            precision=results["method"]["precision"],
+            recall=results["method"]["recall"],
+            hmean=results["method"]["hmean"],
+        )
+
+    def _crop_rect(self, img, rect):
+        # get the parameter of the small rectangle
+        center = rect[0]
+        size = rect[1]
+        angle = rect[2]
+        center, size = tuple(map(int, center)), tuple(map(int, size))
+
+        # get row and col num in img
+        rows, cols = img.shape[0], img.shape[1]
+
+        M = cv2.getRotationMatrix2D(center, angle, 1)
+        img_rot = cv2.warpAffine(img, M, (cols, rows))
+        out = cv2.getRectSubPix(img_rot, size, center)
+
+        return out
 
 
 class LanyBenchmarkerICDAR2015(LanyBenchmarker):
@@ -183,16 +288,17 @@ class LanyBenchmarkerICDAR2015(LanyBenchmarker):
             # for line in lines:
             #     _parts = line.split(",")
             #     _line = ""
-            #     for i in range(8):
+            #     for i in range(9):
             #         _line += _parts[i]
-            #         if i < 7:
+            #         if i < 8:
             #             _line += ","
-            #     preds += _line + "\n"
+            #     # preds += _line + "\n"
+            #     preds += _line
             # self.id2preds[gt_id] = preds.encode()
 
 
 ocr = LanyOcr()
 test = LanyBenchmarkerICDAR2015(ocr, "./datasets/ICDAR/2015")
 data = test.load_dataset()
-det_accuracy = test.compute_detector_accuracy()
+det_accuracy = test.compute_recognizer_accuracy()
 print(det_accuracy)

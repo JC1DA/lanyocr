@@ -385,6 +385,10 @@ class LanyOcr:
                 text += sub_text
                 prob *= sub_prob
 
+            if not self.merge_boxes_inference:
+                # sub_rrects should have only 1 object
+                sub_rrects[0].text = sub_text
+
             i += 1
 
         return LanyOcrResult(text=text, prob=prob, line=line)

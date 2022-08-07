@@ -85,7 +85,8 @@ class LanyOcr:
             if result.text != "":
                 ocr_results.append(result)
 
-            print(f'Line {line_idx} - Text: "{result.text}" - Score: {result.prob}')
+            if self.debug:
+                print(f'Line {line_idx} - Text: "{result.text}" - Score: {result.prob}')
 
         return ocr_results
 
@@ -384,6 +385,10 @@ class LanyOcr:
                     text += " "
                 text += sub_text
                 prob *= sub_prob
+
+            if not self.merge_boxes_inference:
+                # sub_rrects should have only 1 object
+                sub_rrects[0].text = sub_text
 
             i += 1
 

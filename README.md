@@ -43,6 +43,19 @@ Output image will be in outputs/output.jpg
 
 **Note**: Some unicode characters cannot be visualized correctly by OpenCV, please find the text lines in the console log.
 
+## Validate accuracy
+
+Download ICDAR 2015 dataset
+```
+bash datasets/download_icdar2015.sh
+```
+
+Validate accuracy
+```
+python benchmark.py
+```
+
+
 ## Online API
 
 You can try LanyOCR free on [RapidAPI](https://rapidapi.com/JC1DA/api/lanyocr)

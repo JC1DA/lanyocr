@@ -1,11 +1,12 @@
-import os
-import cv2
 import math
+import os
+from enum import Enum
+from typing import Any, List, Tuple
+
+import cv2
 import numpy as np
 import requests
 from pydantic import BaseModel
-from enum import Enum
-from typing import Any, List, Tuple
 
 
 class LanyOcrMergeType(str, Enum):
@@ -29,6 +30,7 @@ class LanyOcrRRect(BaseModel):
     rrect: Any
     points: List[List[float]]
     direction: str
+    text: str = ""
 
     def getCenter(self) -> Tuple[float, float]:
         return (self.rrect[0][0], self.rrect[0][1])

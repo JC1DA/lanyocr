@@ -85,7 +85,8 @@ class LanyOcr:
             if result.text != "":
                 ocr_results.append(result)
 
-            print(f'Line {line_idx} - Text: "{result.text}" - Score: {result.prob}')
+            if self.debug:
+                print(f'Line {line_idx} - Text: "{result.text}" - Score: {result.prob}')
 
         return ocr_results
 

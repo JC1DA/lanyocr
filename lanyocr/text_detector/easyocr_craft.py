@@ -1,10 +1,11 @@
-import onnxruntime
-import cv2
 import math
-import numpy as np
 from typing import List
-from lanyocr.text_detector import LanyOcrDetector
+
+import cv2
+import numpy as np
+import onnxruntime
 from lanyocr.lanyocr_utils import LanyOcrRRect, download_model
+from lanyocr.text_detector import LanyOcrDetector
 
 
 class EasyOcrCraft(LanyOcrDetector):
@@ -25,6 +26,7 @@ class EasyOcrCraft(LanyOcrDetector):
         opts.graph_optimization_level = (
             onnxruntime.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
         )
+        opts.log_severity_level = 3
 
         self.session = onnxruntime.InferenceSession(
             model_path, sess_options=opts, providers=providers

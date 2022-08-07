@@ -1,7 +1,7 @@
 from lanyocr import LanyOcr
 from lanyocr.benchmarker.benchmarker_icdar2015 import LanyBenchmarkerICDAR2015
 
-ocr = LanyOcr()
+ocr = LanyOcr(detector_name="easyocr_craft", recognizer_name="paddleocr_en_server")
 benchmarker = LanyBenchmarkerICDAR2015(ocr, "./datasets/ICDAR/2015")
 
 detector_accuracy = benchmarker.compute_detector_accuracy()

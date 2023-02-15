@@ -36,6 +36,7 @@ class LanyOcr:
         if merge_boxes_inference and recognizer_name in [
             "mmocr_satrn",
             "mmocr_satrn_sm",
+            "paddleocr_en_ppocr_v3",
         ]:
             merge_boxes_inference = False
             print(

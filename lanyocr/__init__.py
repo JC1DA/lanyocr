@@ -36,11 +36,17 @@ class LanyOcr:
         if merge_boxes_inference and recognizer_name in [
             "mmocr_satrn",
             "mmocr_satrn_sm",
+            "paddleocr_en_ppocr_v3",
         ]:
             merge_boxes_inference = False
-            print(
-                f"Disabled merge_boxes_inference because {recognizer_name} could not recognize space character."
-            )
+            if recognizer_name == "paddleocr_en_ppocr_v3":
+                print(
+                    f"Disabled merge_boxes_inference because {recognizer_name} has dynamic input width."
+                )
+            else:
+                print(
+                    f"Disabled merge_boxes_inference because {recognizer_name} could not recognize space character."
+                )
 
         self.detector = LanyOcrDetectorFactory.create(detector_name, use_gpu=use_gpu)
         self.recognizer = LanyOcrRecognizerFactory.create(

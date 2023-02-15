@@ -4,9 +4,9 @@ A general OCR to detect and recognize English texts in an image based on a combi
 
 LanyOCR automatically merges text boxes into lines even for rotated texts.
 
-![alt text](outputs/example1.jpg)
+![alt text](https://raw.githubusercontent.com/JC1DA/lanyocr/main/outputs/example1.jpg)
 
-![alt text](outputs/example2.jpg)
+![alt text](https://raw.githubusercontent.com/JC1DA/lanyocr/main/outputs/example2.jpg)
 
 # Getting Started
 ### Install dependencies

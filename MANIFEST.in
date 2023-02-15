@@ -1,0 +1,4 @@
+lanyocr/text_recognizer/dicts/paddleocr_en_dict.json
+lanyocr/text_recognizer/dicts/paddleocr_french_dict.json
+lanyocr/text_recognizer/dicts/paddleocr_latin_dict.json
+lanyocr/text_recognizer/dicts/ppocr_keys_v1_mod.json

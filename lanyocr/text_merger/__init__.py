@@ -1,10 +1,15 @@
 import os
-from abc import ABC, abstractmethod
-from typing import List, Tuple
-from lanyocr.lanyocr_utils import LanyOcrRRect, LanyOcrTextLine
+from abc import ABC
+from abc import abstractmethod
+from typing import List
+from typing import Tuple
+
+from lanyocr.lanyocr_utils import LanyOcrRRect
+from lanyocr.lanyocr_utils import LanyOcrTextLine
 
 MODULE_DICT = {
-    "lanyocr_craftbased": ["lanyocr_craft_merger.py", "LanyOcrCraftBasedMerger"]
+    "lanyocr_nomerger": ["lanyocr_nomerger.py", "LanyOcrNoMerger"],
+    "lanyocr_craftbased": ["lanyocr_craft_merger.py", "LanyOcrCraftBasedMerger"],
 }
 
 
@@ -28,7 +33,8 @@ class LanyOcrMergerFactory:
         if name not in MODULE_DICT:
             raise ValueError("Invalid name")
 
-        import importlib, inspect
+        import importlib
+        import inspect
 
         cur_dir = os.path.dirname(os.path.realpath(__file__))
         module_name = name

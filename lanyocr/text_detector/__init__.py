@@ -1,10 +1,15 @@
 import os
-from abc import ABC, abstractmethod
-from typing import List, Tuple
+from abc import ABC
+from abc import abstractmethod
+from typing import List
+from typing import Tuple
 
 from lanyocr.lanyocr_utils import LanyOcrRRect
 
-MODULE_DICT = {"easyocr_craft": ["easyocr_craft.py", "EasyOcrCraft"]}
+MODULE_DICT = {
+    "easyocr_craft": ["easyocr_craft.py", "EasyOcrCraft"],
+    "paddleocr_en_ppocr_v3": ["paddleocr_en_ppocrv3.py", "PaddleOcrEnPPOCRV3"],
+}
 
 
 class LanyOcrDetector(ABC):
@@ -22,7 +27,8 @@ class LanyOcrDetectorFactory:
         if name not in MODULE_DICT:
             raise ValueError("Invalid name")
 
-        import importlib, inspect
+        import importlib
+        import inspect
 
         cur_dir = os.path.dirname(os.path.realpath(__file__))
         module_name = name

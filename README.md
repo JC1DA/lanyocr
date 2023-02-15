@@ -11,7 +11,7 @@ LanyOCR automatically merges text boxes into lines even for rotated texts.
 # Getting Started
 ### Install dependencies
 ```
-pip install -r requirements.txt
+pip install lanyocr
 ```
 
 ### Run example

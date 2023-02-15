@@ -1,4 +1,5 @@
 import argparse
+
 from lanyocr import LanyOcr
 
 
@@ -6,9 +7,11 @@ def main(args):
     ocr = LanyOcr(
         detector_name=args.detector_name,
         recognizer_name=args.recognizer_name,
+        merger_name=args.merger_name,
         merge_boxes_inference=args.merge_boxes_inference,
         merge_rotated_boxes=args.merge_rotated_boxes,
         merge_vertical_boxes=args.merge_vertical_boxes,
+        use_gpu=args.use_gpu,
         debug=args.debug,
     )
 
@@ -28,14 +31,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--detector_name",
         type=str,
-        default="easyocr_craft",
-        help='Name of detector, must be one of these ["easyocr_craft"]',
+        default="paddleocr_en_ppocr_v3",
+        help='Name of detector, must be one of these ["easyocr_craft", "paddleocr_en_ppocr_v3"]',
     )
     parser.add_argument(
         "--recognizer_name",
         type=str,
-        default="paddleocr_en_server",
-        help='Name of recognizer, must be one of these ["paddleocr_en_server", "paddleocr_en_mobile", "paddleocr_french_mobile", "paddleocr_latin_mobile"]',
+        default="paddleocr_en_ppocr_v3",
+        help='Name of recognizer, must be one of these ["paddleocr_en_server", "paddleocr_en_mobile", "paddleocr_en_ppocr_v3", "paddleocr_french_mobile", "paddleocr_latin_mobile"]',
+    )
+    parser.add_argument(
+        "--merger_name",
+        type=str,
+        default="lanyocr_nomerger",
+        help="Name of merger, must be one of these ['lanyocr_nomerger', 'lanyocr_craftbased']",
     )
     parser.add_argument(
         "--merge_rotated_boxes",
@@ -54,6 +63,12 @@ if __name__ == "__main__":
         default=False,
         type=lambda x: (str(x).lower() == "true"),
         help="merge boxes in a text line into images before running inferece to speedup recognition step",
+    )
+    parser.add_argument(
+        "--use_gpu",
+        default=False,
+        type=lambda x: (str(x).lower() == "true"),
+        help="use GPU for inference",
     )
     parser.add_argument(
         "--debug",

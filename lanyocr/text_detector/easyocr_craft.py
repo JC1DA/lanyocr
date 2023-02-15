@@ -4,7 +4,9 @@ from typing import List
 import cv2
 import numpy as np
 import onnxruntime
-from lanyocr.lanyocr_utils import LanyOcrRRect, download_model
+
+from lanyocr.lanyocr_utils import LanyOcrRRect
+from lanyocr.lanyocr_utils import download_model
 from lanyocr.text_detector import LanyOcrDetector
 
 
@@ -32,11 +34,11 @@ class EasyOcrCraft(LanyOcrDetector):
             model_path, sess_options=opts, providers=providers
         )
 
-    def infer(self, bgr_image) -> List[LanyOcrRRect]:
+    def infer(self, image) -> List[LanyOcrRRect]:
         rrects: List[LanyOcrRRect] = []
-        normed_image = self.preprocess(bgr_image)
+        normed_image = self.preprocess(image)
         det_preds = self.session.run(["output"], {"input": [normed_image]})[0]
-        det_polys = self.postprocess(det_preds[0], bgr_image)
+        det_polys = self.postprocess(det_preds[0], image)
 
         for poly in det_polys:
             cnts = np.array(poly).reshape((1, -1, 2))

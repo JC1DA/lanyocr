@@ -1,6 +1,8 @@
 import os
-from abc import ABC, abstractmethod
-from typing import List, Tuple
+from abc import ABC
+from abc import abstractmethod
+from typing import List
+from typing import Tuple
 
 MODULE_DICT = {
     "paddleocr_en_server": ["paddleocr_ch_ppocr_server_v2.py", "PaddleOcrChServer"],
@@ -16,6 +18,7 @@ MODULE_DICT = {
         "paddleocr_latin_mobile_v2.py",
         "PaddleOcrLatinMobile",
     ],
+    "paddleocr_en_ppocr_v3": ["paddleocr_en_ppocrv3.py", "PaddleOcrEnPPOCRV3"],
     "mmocr_satrn": ["mmocr_satrn.py", "MMOCR_Satrn"],
     "mmocr_satrn_sm": ["mmocr_satrn_sm.py", "MMOCR_Satrn_Sm"],
 }

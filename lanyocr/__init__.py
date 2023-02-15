@@ -6,17 +6,15 @@ import cv2
 import numpy as np
 
 from lanyocr.angle_classifier import LanyOcrAngleClassifierFactory
-from lanyocr.lanyocr_utils import (
-    LanyOcrResult,
-    LanyOcrRRect,
-    LanyOcrTextLine,
-    crop_rrect,
-    distance,
-    resize_img_to_height,
-    resize_img_to_width,
-    rotate_image,
-    rotate_image_at_center,
-)
+from lanyocr.lanyocr_utils import LanyOcrResult
+from lanyocr.lanyocr_utils import LanyOcrRRect
+from lanyocr.lanyocr_utils import LanyOcrTextLine
+from lanyocr.lanyocr_utils import crop_rrect
+from lanyocr.lanyocr_utils import distance
+from lanyocr.lanyocr_utils import resize_img_to_height
+from lanyocr.lanyocr_utils import resize_img_to_width
+from lanyocr.lanyocr_utils import rotate_image
+from lanyocr.lanyocr_utils import rotate_image_at_center
 from lanyocr.text_detector import LanyOcrDetectorFactory
 from lanyocr.text_merger import LanyOcrMergerFactory
 from lanyocr.text_recognizer import LanyOcrRecognizerFactory
@@ -25,13 +23,14 @@ from lanyocr.text_recognizer import LanyOcrRecognizerFactory
 class LanyOcr:
     def __init__(
         self,
-        detector_name: str = "easyocr_craft",
-        recognizer_name: str = "paddleocr_en_server",
+        detector_name: str = "paddleocr_en_ppocr_v3",
+        recognizer_name: str = "paddleocr_en_ppocr_v3",
         angle_classifier_name: str = "paddleocr_mobile",
-        merger_name: str = "lanyocr_craftbased",
+        merger_name: str = "lanyocr_nomerger",
         merge_boxes_inference: bool = False,
         merge_rotated_boxes: bool = True,
         merge_vertical_boxes: bool = False,
+        use_gpu: bool = False,
         debug: bool = False,
     ) -> None:
         if merge_boxes_inference and recognizer_name in [
@@ -43,10 +42,12 @@ class LanyOcr:
                 f"Disabled merge_boxes_inference because {recognizer_name} could not recognize space character."
             )
 
-        self.detector = LanyOcrDetectorFactory.create(detector_name)
-        self.recognizer = LanyOcrRecognizerFactory.create(recognizer_name)
+        self.detector = LanyOcrDetectorFactory.create(detector_name, use_gpu=use_gpu)
+        self.recognizer = LanyOcrRecognizerFactory.create(
+            recognizer_name, use_gpu=use_gpu
+        )
         self.angle_classifier = LanyOcrAngleClassifierFactory.create(
-            angle_classifier_name
+            angle_classifier_name, use_gpu=use_gpu
         )
         self.merger = LanyOcrMergerFactory.create(merger_name)
 

@@ -31,6 +31,7 @@ class LanyOcr:
         merge_rotated_boxes: bool = True,
         merge_vertical_boxes: bool = False,
         use_gpu: bool = False,
+        disable_angle_classifier: bool = False,
         debug: bool = False,
     ) -> None:
         if merge_boxes_inference and recognizer_name in [
@@ -62,6 +63,7 @@ class LanyOcr:
         self.merge_boxes_inference = merge_boxes_inference
         self.merge_rotated_boxes = merge_rotated_boxes
         self.merge_vertical_boxes = merge_vertical_boxes
+        self.disable_angle_classifier = disable_angle_classifier
 
         self.debug: bool = debug
         self.debug_dir = "./debug"
@@ -470,6 +472,9 @@ class LanyOcr:
         return line_img[:, left:right, :]
 
     def _is_line_flipped(self, line_img, thresh):
+        if self.disable_angle_classifier:
+            return 0
+
         # determine if a text is 180 degrees flipped or not
         flipped_count = 0
         num_tries = 3

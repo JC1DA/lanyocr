@@ -12,6 +12,7 @@ def main(args):
         merge_rotated_boxes=args.merge_rotated_boxes,
         merge_vertical_boxes=args.merge_vertical_boxes,
         use_gpu=args.use_gpu,
+        disable_angle_classifier=args.disable_angle_classifier,
         debug=args.debug,
     )
 
@@ -32,13 +33,13 @@ if __name__ == "__main__":
         "--detector_name",
         type=str,
         default="paddleocr_en_ppocr_v3",
-        help='Name of detector, must be one of these ["easyocr_craft", "paddleocr_en_ppocr_v3"]',
+        help='Name of detector, must be one of these ["easyocr_craft", "paddleocr_en_ppocr_v3", "paddleocr_en_ppocr_v3"]',
     )
     parser.add_argument(
         "--recognizer_name",
         type=str,
         default="paddleocr_en_ppocr_v3",
-        help='Name of recognizer, must be one of these ["paddleocr_en_server", "paddleocr_en_mobile", "paddleocr_en_ppocr_v3", "paddleocr_french_mobile", "paddleocr_latin_mobile"]',
+        help='Name of recognizer, must be one of these ["paddleocr_en_server", "paddleocr_en_mobile", "paddleocr_en_ppocr_v3", "paddleocr_en_ppocr_v3_fp16", "paddleocr_french_mobile", "paddleocr_latin_mobile"]',
     )
     parser.add_argument(
         "--merger_name",
@@ -75,6 +76,12 @@ if __name__ == "__main__":
         default=False,
         type=lambda x: (str(x).lower() == "true"),
         help="generate text lines and text boxes images for debugging purposes",
+    )
+    parser.add_argument(
+        "--disable_angle_classifier",
+        default=False,
+        type=lambda x: (str(x).lower() == "true"),
+        help="disable angle classifier",
     )
     args = parser.parse_args()
 

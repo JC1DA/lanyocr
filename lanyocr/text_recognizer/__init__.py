@@ -19,6 +19,10 @@ MODULE_DICT = {
         "PaddleOcrLatinMobile",
     ],
     "paddleocr_en_ppocr_v3": ["paddleocr_en_ppocrv3.py", "PaddleOcrEnPPOCRV3"],
+    "paddleocr_en_ppocr_v3_fp16": [
+        "paddleocr_en_ppocrv3_fp16.py",
+        "PaddleOcrEnPPOCRV3FP16",
+    ],
     "mmocr_satrn": ["mmocr_satrn.py", "MMOCR_Satrn"],
     "mmocr_satrn_sm": ["mmocr_satrn_sm.py", "MMOCR_Satrn_Sm"],
 }

@@ -9,6 +9,10 @@ from lanyocr.lanyocr_utils import LanyOcrRRect
 MODULE_DICT = {
     "easyocr_craft": ["easyocr_craft.py", "EasyOcrCraft"],
     "paddleocr_en_ppocr_v3": ["paddleocr_en_ppocrv3.py", "PaddleOcrEnPPOCRV3"],
+    "paddleocr_en_ppocr_v3_fp16": [
+        "paddleocr_en_ppocrv3_fp16.py",
+        "PaddleOcrEnPPOCRV3FP16",
+    ],
 }
 
 

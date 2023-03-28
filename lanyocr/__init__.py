@@ -4,6 +4,10 @@ from typing import List
 
 import cv2
 import numpy as np
+import concurrent
+import concurrent.futures
+import threading
+import multiprocessing
 
 from lanyocr.angle_classifier import LanyOcrAngleClassifierFactory
 from lanyocr.lanyocr_utils import LanyOcrResult
@@ -58,6 +62,9 @@ class LanyOcr:
         )
         self.merger = LanyOcrMergerFactory.create(merger_name)
 
+        self.recognizer_lock = threading.Lock()
+        self.angle_classifier_lock = threading.Lock()
+
         self.rotate_90degrees_thresh = 1.5
         self.spacing = 10
         self.merge_boxes_inference = merge_boxes_inference
@@ -89,12 +96,28 @@ class LanyOcr:
 
         original_img = np.array(brg_image)
 
-        for line_idx, line in enumerate(det_lines):
-            result = self._infer_line(original_img, line, line_idx)
-            if result.text != "":
-                ocr_results.append(result)
+        # for line_idx, line in enumerate(det_lines):
+        #     result = self._infer_line(original_img, line, line_idx)
+        #     if result.text != "":
+        #         ocr_results.append(result)
 
-            if self.debug:
+        #     if self.debug:
+        #         print(f'Line {line_idx} - Text: "{result.text}" - Score: {result.prob}')
+
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=multiprocessing.cpu_count()
+        ) as executor:
+            futures = [
+                executor.submit(self._infer_line, original_img, line, line_idx)
+                for line_idx, line in enumerate(det_lines)
+            ]
+            for future in concurrent.futures.as_completed(futures):
+                result = future.result()
+                if result.text != "":
+                    ocr_results.append(result)
+
+        if self.debug:
+            for line_idx, result in enumerate(ocr_results):
                 print(f'Line {line_idx} - Text: "{result.text}" - Score: {result.prob}')
 
         return ocr_results
@@ -366,7 +389,8 @@ class LanyOcr:
                 )
                 cv2.imwrite(image_path, merged_img)
 
-        recogition_results = self.recognizer.infer_batch(merged_imgs)
+        with self.recognizer_lock:
+            recogition_results = self.recognizer.infer_batch(merged_imgs)
 
         i = 0
         for sub_rrects, recognition_result in zip(
@@ -493,8 +517,9 @@ class LanyOcr:
             padded_imgs.append(padded_img)
 
         # run in batch
-        for rotated_angle in self.angle_classifier.infer_batch(padded_imgs, thresh):
-            if rotated_angle == 180:
-                flipped_count += 1
+        with self.angle_classifier_lock:
+            for rotated_angle in self.angle_classifier.infer_batch(padded_imgs, thresh):
+                if rotated_angle == 180:
+                    flipped_count += 1
 
         return flipped_count > num_tries // 2

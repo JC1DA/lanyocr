@@ -98,7 +98,7 @@ class LanyOcr:
 
         original_img = np.array(brg_image)
 
-        if self.use_threadpool:
+        if not self.use_threadpool:
             for line_idx, line in enumerate(det_lines):
                 result = self._infer_line(original_img, line, line_idx)
                 if result.text != "":

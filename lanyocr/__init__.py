@@ -412,7 +412,8 @@ class LanyOcr:
                 sub_probs = []
                 for angle in [45, 135]:
                     rotated_img = rotate_image(merged_imgs[i], angle)
-                    extra_result = self.recognizer.infer(rotated_img)
+                    with self.recognizer_lock:
+                        extra_result = self.recognizer.infer(rotated_img)
                     sub_texts.append(extra_result[0])
                     sub_probs.append(extra_result[1])
                 sub_text = sub_texts[np.argmax(sub_probs)]

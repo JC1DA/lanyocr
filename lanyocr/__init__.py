@@ -1,13 +1,13 @@
+import concurrent
+import concurrent.futures
 import math
+import multiprocessing
 import os
+import threading
 from typing import List
 
 import cv2
 import numpy as np
-import concurrent
-import concurrent.futures
-import threading
-import multiprocessing
 
 from lanyocr.angle_classifier import LanyOcrAngleClassifierFactory
 from lanyocr.lanyocr_utils import LanyOcrResult
@@ -36,6 +36,7 @@ class LanyOcr:
         merge_vertical_boxes: bool = False,
         use_gpu: bool = False,
         disable_angle_classifier: bool = False,
+        use_threadpool: bool = False,
         debug: bool = False,
     ) -> None:
         if merge_boxes_inference and recognizer_name in [
@@ -71,6 +72,7 @@ class LanyOcr:
         self.merge_rotated_boxes = merge_rotated_boxes
         self.merge_vertical_boxes = merge_vertical_boxes
         self.disable_angle_classifier = disable_angle_classifier
+        self.use_threadpool = use_threadpool
 
         self.debug: bool = debug
         self.debug_dir = "./debug"
@@ -96,29 +98,34 @@ class LanyOcr:
 
         original_img = np.array(brg_image)
 
-        # for line_idx, line in enumerate(det_lines):
-        #     result = self._infer_line(original_img, line, line_idx)
-        #     if result.text != "":
-        #         ocr_results.append(result)
-
-        #     if self.debug:
-        #         print(f'Line {line_idx} - Text: "{result.text}" - Score: {result.prob}')
-
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=multiprocessing.cpu_count()
-        ) as executor:
-            futures = [
-                executor.submit(self._infer_line, original_img, line, line_idx)
-                for line_idx, line in enumerate(det_lines)
-            ]
-            for future in concurrent.futures.as_completed(futures):
-                result = future.result()
+        if self.use_threadpool:
+            for line_idx, line in enumerate(det_lines):
+                result = self._infer_line(original_img, line, line_idx)
                 if result.text != "":
                     ocr_results.append(result)
 
-        if self.debug:
-            for line_idx, result in enumerate(ocr_results):
-                print(f'Line {line_idx} - Text: "{result.text}" - Score: {result.prob}')
+                if self.debug:
+                    print(
+                        f'Line {line_idx} - Text: "{result.text}" - Score: {result.prob}'
+                    )
+        else:
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=multiprocessing.cpu_count()
+            ) as executor:
+                futures = [
+                    executor.submit(self._infer_line, original_img, line, line_idx)
+                    for line_idx, line in enumerate(det_lines)
+                ]
+                for future in concurrent.futures.as_completed(futures):
+                    result = future.result()
+                    if result.text != "":
+                        ocr_results.append(result)
+
+            if self.debug:
+                for line_idx, result in enumerate(ocr_results):
+                    print(
+                        f'Line {line_idx} - Text: "{result.text}" - Score: {result.prob}'
+                    )
 
         return ocr_results
 

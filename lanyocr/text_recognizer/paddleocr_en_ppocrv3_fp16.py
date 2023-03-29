@@ -42,6 +42,7 @@ class PaddleOcrEnPPOCRV3FP16(PaddleOcrBase):
             model_h,
         )
 
+        self.max_w = 1024
         self.set_max_batch_size(1)
 
     # override the base class method
@@ -69,5 +70,11 @@ class PaddleOcrEnPPOCRV3FP16(PaddleOcrBase):
         resized_image = resized_image.transpose((2, 0, 1)) / 255.0
         resized_image -= 0.5
         resized_image /= 0.5
+
+        if resized_w < self.max_w:
+            padded_image = np.zeros([3, self.model_h, self.max_w], dtype=np.float32)
+            padded_image[:, :, :resized_w] = resized_image
+        else:
+            padded_image = resized_image
 
         return resized_image

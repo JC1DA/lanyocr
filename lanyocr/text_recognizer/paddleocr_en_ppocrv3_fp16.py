@@ -77,4 +77,4 @@ class PaddleOcrEnPPOCRV3FP16(PaddleOcrBase):
         else:
             padded_image = resized_image
 
-        return resized_image
+        return padded_image
